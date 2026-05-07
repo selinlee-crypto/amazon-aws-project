@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>의약품 원료 규격서 검토 자동화 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        brand: {
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for better UX */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* 인쇄용 화면 최적화 (보고서 영역 전용) */
+        @media print {
+            /* 1. 불필요한 영역 숨김: 사이드바, 분석 설정 패널, 우측 상단 결과 뷰어 타이틀바 */
+            aside, 
+            main > section:first-of-type, 
+            main > section:last-of-type > div:first-of-type {
+                display: none !important;
+            }
+
+            /* 2. 전체 레이아웃 초기화 및 너비 100% 확장 */
+            body, html, main, main > section:last-of-type, main > section:last-of-type > div:last-of-type {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            /* 3. 리포트 메인 컨테이너 그림자/테두리/여백 제거 */
+            #resultReport {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            #resultReport > div {
+                max-width: 100% !important;
+                width: 100% !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* 요소 배경색 및 뱃지 색상 강제 렌더링 유지 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* 4. 요소 잘림(Page Break) 방지 설정 */
+            table, tr, td, th, li, .bg-gray-50, .bg-red-50, .bg-green-50, .bg-red-100, .bg-green-100 {
+                page-break-inside: avoid !important;
+            }
+
+            /* A4 용지 기준 인쇄 여백 설정 */
+            @page {
+                size: A4 portrait;
+                margin: 15mm;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen overflow-hidden flex font-sans">
+
+    <!-- 좌측 사이드바: 규제 데이터베이스 -->
+    <aside class="w-72 bg-navy-900 text-white flex flex-col h-full shadow-lg z-10">
+        <div class="p-6 border-b border-navy-800">
+            <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-shield-halved mr-2 text-brand-500"></i>ReguCheck</h1>
+            <p class="text-xs text-gray-400 mt-1">원료 규격서 자동 검토 대시보드</p>
+        </div>
+
+        <div class="p-6 flex-1 overflow-y-auto">
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">글로벌 규제 가이드라인</h2>
+            <ul class="space-y-3 mb-8">
+                <li>
+                    <a href="https://nedrug.mfds.go.kr/" target="_blank" class="flex items-center p-3 rounded-lg bg-navy-800 hover:bg-brand-600 transition-colors border border-navy-800 hover:border-brand-500 group">
+                        <i class="fa-solid fa-globe text-gray-400 group-hover:text-white w-6"></i>
+                        <div class="ml-2">
+                            <span class="block text-sm font-medium">한국 식약처 (MFDS)</span>
+                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">의약품안전나라</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square ml-auto text-xs text-gray-500 group-hover:text-gray-300"></i>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://www.ich.org/page/quality-guidelines" target="_blank" class="flex items-center p-3 rounded-lg bg-navy-800 hover:bg-brand-600 transition-colors border border-navy-800 hover:border-brand-500 group">
+                        <i class="fa-solid fa-book-medical text-gray-400 group-hover:text-white w-6"></i>
+                        <div class="ml-2">
+                            <span class="block text-sm font-medium">ICH Q Guidelines</span>
+                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">품질 가이드라인</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square ml-auto text-xs text-gray-500 group-hover:text-gray-300"></i>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://www.fda.gov/regulatory-information/search-fda-guidance-documents" target="_blank" class="flex items-center p-3 rounded-lg bg-navy-800 hover:bg-brand-600 transition-colors border border-navy-800 hover:border-brand-500 group">
+                        <i class="fa-solid fa-building-flag text-gray-400 group-hover:text-white w-6"></i>
+                        <div class="ml-2">
+                            <span class="block text-sm font-medium">미국 FDA</span>
+                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">의약품 가이던스</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square ml-auto text-xs text-gray-500 group-hover:text-gray-300"></i>
+                    </a>
+                </li>
+            </ul>
+
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">로컬 규제 데이터베이스</h2>
+            <div class="bg-navy-800 rounded-lg p-4 border border-dashed border-gray-600 text-center relative">
+                <div id="localFolderPrompt">
+                    <i class="fa-solid fa-folder-open text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-sm text-gray-300 mb-3">내부 규제 파일(CSV, Excel) 업로드</p>
+                    <label class="cursor-pointer bg-navy-900 hover:bg-gray-700 text-white text-xs py-2 px-4 rounded transition-colors inline-block border border-gray-600">
+                        <i class="fa-solid fa-upload mr-1"></i> 파일 선택
+                        <input type="file" multiple accept=".csv, .xlsx, .xls" class="hidden" onchange="updateLocalFolderStatus(this)">
+                    </label>
+                </div>
+                
+                <div id="localFolderResult" class="hidden text-left mt-2">
+                    <p class="text-xs font-semibold text-green-400 mb-2 border-b border-navy-700 pb-1"><i class="fa-solid fa-check-circle mr-1"></i>데이터 연동 완료</p>
+                    <ul class="text-xs text-gray-300 space-y-1.5" id="mockCsvList">
+                        <!-- JS에서 렌더링 됨 -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-4 bg-navy-900 border-t border-navy-800 text-xs text-gray-500 text-center">
+            &copy; 2026 RA Dashboard
+        </div>
+    </aside>
+
+    <!-- 중앙/우측 컨테이너 -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- 중앙: 메인 액션 -->
+        <section class="w-1/3 min-w-[350px] max-w-[450px] bg-gray-50 border-r border-gray-200 flex flex-col h-full shadow-inner z-0">
+            <div class="p-6 border-b border-gray-200 bg-white">
+                <h2 class="text-lg font-bold text-navy-900"><i class="fa-solid fa-file-contract mr-2 text-brand-500"></i>분석 설정</h2>
+                <p class="text-sm text-gray-500 mt-1">검토할 원료 규격서를 업로드하고 작업을 선택하세요.</p>
+            </div>
+            
+            <div class="p-6 flex-1 overflow-y-auto">
+                <!-- 파일 업로드 영역 -->
+                <div class="mb-8">
+                    <label class="block text-sm font-semibold text-navy-900 mb-2">원료 규격서 (API Spec) 업로드</label>
+                    <div class="border-2 border-dashed border-gray-300 bg-white rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-brand-500 hover:bg-blue-50 transition-colors cursor-pointer" onclick="document.getElementById('fileUpload').click()">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                            <i class="fa-solid fa-file-arrow-up text-brand-600 text-xl"></i>
+                        </div>
+                        <p class="text-sm font-medium text-gray-700">여기로 파일을 드래그하거나 클릭하여 업로드</p>
+                        <p class="text-xs text-gray-500 mt-1">지원 포맷: PDF, DOCX, XLSX (최대 50MB)</p>
+                        <input type="file" id="fileUpload" class="hidden" onchange="updateUploadStatus(this)">
+                    </div>
+                    
+                    <!-- 업로드된 파일 리스트 -->
+                    <div id="uploadedFileList" class="mt-3 space-y-2 hidden">
+                        <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div class="flex items-center">
+                                <!-- 상태 아이콘 및 로더 -->
+                                <div id="uploadFileIconWrapper" class="mr-3 w-6 flex justify-center">
+                                    <i id="uploadFileIcon" class="fa-solid fa-file-pdf text-red-500 text-lg"></i>
+                                    <div id="uploadLoader" class="hidden animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600"></div>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-800" id="uploadedFileName">API_Spec_Aspirin_v1.2.pdf</p>
+                                    <p class="text-xs text-gray-500 transition-colors" id="uploadFileStatusText">대기 중</p>
+                                </div>
+                            </div>
+                            <button id="removeFileBtn" class="text-gray-400 hover:text-red-500 transition-colors" onclick="removeFile()">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 액션 버튼 -->
+                <div>
+                    <label class="block text-sm font-semibold text-navy-900 mb-3">검토 액션</label>
+                    <div class="space-y-3">
+                        <button onclick="showResult('missing')" class="w-full text-left bg-white border border-gray-200 hover:border-brand-500 hover:shadow-md rounded-lg p-4 transition-all group flex items-start">
+                            <div class="w-10 h-10 rounded bg-red-50 text-red-600 flex items-center justify-center mr-3 group-hover:bg-red-100 transition-colors shrink-0">
+                                <i class="fa-solid fa-magnifying-glass-chart text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">식약처(국내) 필수 항목 누락 검출</h3>
+                                <p class="text-xs text-gray-500 mt-1 leading-snug">규제 가이드라인 기준, 규격서 내 누락된 품질 관리 항목 및 기준치 이탈 여부를 확인합니다.</p>
+                            </div>
+                        </button>
+
+                        <button onclick="showResult('compare')" class="w-full text-left bg-white border border-gray-200 hover:border-brand-500 hover:shadow-md rounded-lg p-4 transition-all group flex items-start">
+                            <div class="w-10 h-10 rounded bg-blue-50 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-100 transition-colors shrink-0">
+                                <i class="fa-solid fa-code-compare text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">글로벌(ICH/FDA) 규제 교차 비교 현황</h3>
+                                <p class="text-xs text-gray-500 mt-1 leading-snug">MFDS, FDA, ICH 간의 상이한 규격 기준을 교차 비교하고 차이점을 도출합니다.</p>
+                            </div>
+                        </button>
+
+                        <button onclick="showResult('report')" class="w-full text-left bg-white border border-gray-200 hover:border-brand-500 hover:shadow-md rounded-lg p-4 transition-all group flex items-start">
+                            <div class="w-10 h-10 rounded bg-green-50 text-green-600 flex items-center justify-center mr-3 group-hover:bg-green-100 transition-colors shrink-0">
+                                <i class="fa-solid fa-stopwatch text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">검수 소요시간 단축 리포트</h3>
+                                <p class="text-xs text-gray-500 mt-1 leading-snug">전체 검토 내역 요약 및 통계를 생성하여 최종 QA/RA 승인용 보고서 형태를 제공합니다.</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 우측: 결과 뷰어 -->
+        <section class="flex-1 bg-white flex flex-col h-full">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-white shadow-sm z-10">
+                <h2 class="text-xl font-bold text-navy-900" id="resultTitle">결과 뷰어</h2>
+                <div class="space-x-2 hidden" id="actionButtons">
+                    <button id="csvDownloadBtn" onclick="downloadCSV()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fa-solid fa-download mr-1"></i> CSV 다운로드
+                    </button>
+                    <button onclick="window.print()" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-500 transition-colors">
+                        <i class="fa-solid fa-print mr-1"></i> 리포트 출력
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 p-6 overflow-y-auto bg-gray-50 relative">
+                <!-- 대기 상태 화면 -->
+                <div id="idleState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-white h-full">
+                    <!-- 아이콘을 FontAwesome으로 변경하여 외부 이미지 의존도 낮춤 -->
+                    <i class="fa-solid fa-chart-pie text-7xl text-gray-300 mb-6"></i>
+                    <h3 class="text-xl font-bold text-gray-700">검토가 준비되었습니다</h3>
+                    <p class="text-gray-500 mt-2 max-w-md">좌측 메뉴에서 파일을 업로드하고 검토 액션을 선택하면<br>이곳에 상세 분석 결과가 표시됩니다.</p>
+                </div>
+
+                <!-- 분석 진행중 (로더) -->
+                <div id="loadingState" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-20 h-full">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-600 mb-4"></div>
+                    <h3 class="text-lg font-bold text-navy-900">데이터베이스 분석 중...</h3>
+                    <p class="text-sm text-gray-500 mt-2" id="loadingText">문서의 규격 파라미터를 추출하고 있습니다.</p>
+                </div>
+
+                <!-- 결과: 누락 항목 검출 -->
+                <div id="resultMissing" class="hidden space-y-6 h-full">
+                    <!-- 요약 카드 -->
+                    <div class="grid grid-cols-3 gap-4" id="missingSummaryCards">
+                        <!-- JS 렌더링 영역 -->
+                    </div>
+
+                    <!-- 결과 데이터 테이블 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-6">
+                        <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                            <h3 class="font-bold text-navy-900">상세 검출 내역</h3>
+                            <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">조치 필요</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">항목명 (Parameter)</th>
+                                        <th scope="col" class="px-6 py-3">문서 내 기재값</th>
+                                        <th scope="col" class="px-6 py-3">규제 기준 (MFDS)</th>
+                                        <th scope="col" class="px-6 py-3">상태</th>
+                                        <th scope="col" class="px-6 py-3">권고사항</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="missingTableBody">
+                                    <!-- JS 렌더링 영역 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 결과: 규제 비교 분석 (엔터프라이즈급 4대 분야 탭) -->
+                <div id="resultCompare" class="hidden h-full flex flex-col space-y-4">
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col flex-1 overflow-hidden">
+                        <!-- 탭 헤더 -->
+                        <div class="flex items-center justify-between px-5 pt-4 border-b border-gray-200 bg-gray-50 shrink-0">
+                            <div class="flex space-x-1" id="compareTabs">
+                                <button onclick="switchCompareTab('pharma')" id="tab-pharma" class="px-4 py-2 text-sm font-bold border-b-2 border-brand-600 text-brand-600 transition-colors"><i class="fa-solid fa-capsules mr-1"></i>의약품</button>
+                                <button onclick="switchCompareTab('quasi')" id="tab-quasi" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors"><i class="fa-solid fa-notes-medical mr-1"></i>의약외품</button>
+                                <button onclick="switchCompareTab('cosmetic')" id="tab-cosmetic" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors"><i class="fa-solid fa-spray-can-sparkles mr-1"></i>화장품</button>
+                                <button onclick="switchCompareTab('device')" id="tab-device" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors"><i class="fa-solid fa-stethoscope mr-1"></i>의료기기</button>
+                            </div>
+                            <div class="text-xs text-gray-500 flex items-center mb-1">
+                                <span class="bg-blue-100 text-brand-600 px-2 py-0.5 rounded font-bold mr-2">Top 30 심사 제품</span>
+                            </div>
+                        </div>
+
+                        <!-- 탭 내용 영역 (스크롤 테이블) -->
+                        <div class="flex-1 overflow-y-auto p-0 relative transition-opacity duration-300" id="compareContentWrapper">
+                            <table class="w-full text-sm text-left border-collapse">
+                                <thead class="sticky top-0 bg-navy-900 text-white z-10 shadow-sm">
+                                    <tr>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold w-16 text-center">순위</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-item-name">품목 (성분/제품)</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold">한국 식약처</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-foreign-1">미국 FDA</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-foreign-2">유럽/ICH</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold w-40">규제 일치율</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold">판정 요약</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compareTableBody" class="divide-y divide-gray-200">
+                                    <!-- JS 렌더링 영역 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 결과: 리포트 -->
+                <div id="resultReport" class="hidden space-y-6 h-full">
+                    <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm mx-auto max-w-3xl">
+                        <div class="border-b-2 border-navy-900 pb-4 mb-6 flex justify-between items-end">
+                            <div>
+                                <h1 class="text-2xl font-bold text-navy-900 tracking-tight">자동화 검토 결과 보고서</h1>
+                                <p class="text-gray-500 mt-1">Generated by ReguCheck System</p>
+                            </div>
+                            <div class="text-right text-sm">
+                                <p><span class="font-semibold text-gray-700">작성일시:</span> <span id="reportDate"></span></p>
+                                <p><span class="font-semibold text-gray-700">대상문서:</span> <span id="reportDocName"></span></p>
+                            </div>
+                        </div>
+
+                        <!-- ROI 뱃지 우측 상단으로 축소 및 메인 개편 -->
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-navy-900 border-b border-gray-200 pb-2"><i class="fa-solid fa-file-signature text-brand-600 mr-2"></i>QA/RA 품질 평가 (eCTD 기준)</h3>
+                            <div class="bg-green-50 border border-green-200 px-3 py-1.5 rounded-full flex items-center shadow-sm">
+                                <i class="fa-solid fa-bolt text-yellow-500 mr-1.5"></i>
+                                <span class="text-xs font-bold text-green-700">검토 소요시간 95% 단축 완료</span>
+                            </div>
+                        </div>
+
+                        <!-- 1. 종합 판정 요약 -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500 font-medium">통과 (Pass)</p>
+                                    <p class="text-3xl font-bold text-green-600 mt-1" id="reportPassCount">0</p>
+                                </div>
+                                <i class="fa-solid fa-check-circle text-4xl text-green-100"></i>
+                            </div>
+                            <div class="bg-red-50 rounded-xl p-5 border border-red-100 flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500 font-medium">규격 이탈 (OOS)</p>
+                                    <p class="text-3xl font-bold text-red-600 mt-1" id="reportFailCount">0</p>
+                                </div>
+                                <i class="fa-solid fa-triangle-exclamation text-4xl text-red-100"></i>
+                            </div>
+                        </div>
+
+                        <!-- 2. 원료 성분별 규격 준수 현황 -->
+                        <div class="mb-6">
+                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-table-list text-gray-400 mr-1.5"></i>원료 성분별 규격 준수 현황</h4>
+                            <div class="overflow-hidden border border-gray-200 rounded-lg">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-50 text-gray-500 uppercase border-b border-gray-200">
+                                        <tr>
+                                            <th class="px-4 py-2 font-semibold">검토 항목</th>
+                                            <th class="px-4 py-2 font-semibold">기재값</th>
+                                            <th class="px-4 py-2 font-semibold">요구 기준</th>
+                                            <th class="px-4 py-2 font-semibold text-center">판정</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reportTableBody" class="divide-y divide-gray-100">
+                                        <!-- JS 동적 렌더링 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 3. QA/RA 조치 권고사항 -->
+                        <div class="mb-6">
+                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-clipboard-list text-gray-400 mr-1.5"></i>QA/RA 조치 권고사항</h4>
+                            <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                                <ul class="space-y-3" id="actionItemsList">
+                                    <!-- JS 동적 렌더링 영역 -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 전역 상태 관리
+        let isApiSpecUploaded = false;
+        let isLocalDbUploaded = false;
+        let currentApiFileName = "선택된 문서 없음";
+
+        // 공통 다운로드 함수 (CSV)
+        function downloadCSV() {
+            if(!isApiSpecUploaded && !isLocalDbUploaded) {
+                alert("결과가 생성되지 않았습니다.");
+                return;
+            }
+            
+            // 누락 검출 결과가 보이는 상태일 때 표 데이터를 CSV로 추출
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // 한글 깨짐 방지 BOM 추가
+            csvContent += "항목명,문서 내 기재값,규제 기준,상태,권고사항\r\n";
+            
+            mockMissingData.forEach(item => {
+                const status = item.isFail ? "항목 누락" : "적합";
+                csvContent += `"${item.param}","${item.docValue}","${item.mfdsLimit}","${status}","${item.action}"\r\n`;
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "결과보고서.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 가상 CSV 데이터 선언
+        const mockCsvData = [
+            "식약처_규격.csv",
+            "ICH_가이드라인.csv",
+            "FDA_규제.csv"
+        ];
+
+        // 가상 JSON 데이터 (필수 항목 누락 검출)
+        const mockMissingData = [
+            { param: '잔류용매 시험', docValue: '기재 안됨', mfdsLimit: '3000 ppm 이하', status: '항목 누락', action: '제조사에 잔류용매(Methanol 등) 시험성적서 요청', isFail: true },
+            { param: '유연물질 한도', docValue: '기재 안됨', mfdsLimit: '0.1% 이하', status: '항목 누락', action: '유연물질 시험항목 신설 필요', isFail: true },
+            { param: '건조감량 (LOD)', docValue: '0.2%', mfdsLimit: '0.5% 이하', status: '적합', action: '-', isFail: false },
+            { param: '성상 (Appearance)', docValue: '백색 결정성 가루', mfdsLimit: '백색 결정성 가루', status: '적합', action: '-', isFail: false },
+            { param: '확인시험', docValue: 'IR, HPLC 일치', mfdsLimit: 'IR, HPLC', status: '적합', action: '-', isFail: false }
+        ];
+
+        // 글로벌 비교 분석 Mock 데이터 (엔터프라이즈급 4대 분야 분리)
+        // 실제 운영 시 30개 품목 데이터 연동 (현재 각 분야 상위 샘플 표출)
+        const mockCompareDataObj = {
+            pharma: {
+                foreign1Title: "미국 FDA",
+                foreign2Title: "유럽 (EMA/ICH)",
+                itemColTitle: "품목 (주성분/API)",
+                data: [
+                    { rank: 1, name: "아목시실린 (Amoxicillin)", mfds: "유연물질 1.0% 이하", fda: "USP 기준 1.0% 이하", eu: "Ph.Eur 기준 1.0% 이하", matchRate: 100, judge: "✅ 3국 기준 완벽 조화" },
+                    { rank: 2, name: "이부프로펜 (Ibuprofen)", mfds: "잔류용매 Hexane 290ppm", fda: "ICH Q3C 준용 (290ppm)", eu: "ICH Q3C 준용 (290ppm)", matchRate: 100, judge: "✅ 기준 충족" },
+                    { rank: 3, name: "아세트아미노펜 (Acetaminophen)", mfds: "중금속 20ppm 이하(비색법)", fda: "USP <232> 원소불순물", eu: "ICH Q3D 원소불순물 적용", matchRate: 65, judge: "⚠️ 수출 시 ICH Q3D 기반 분석표 추가 필요" },
+                    { rank: 4, name: "로사르탄 칼륨 (Losartan K)", mfds: "아지드 불순물 기준 설정", fda: "NDSRIs 니트로사민 관리", eu: "EMA 니트로사민 관리 강화", matchRate: 75, judge: "⚠️ 니트로사민류 발생 가능성 평가 필수" }
+                ]
+            },
+            quasi: {
+                foreign1Title: "미국 FDA (OTC)",
+                foreign2Title: "유럽 (EU Cosmetics/Biocides)",
+                itemColTitle: "품목 (의약외품)",
+                data: [
+                    { rank: 1, name: "불소 배합 치약", mfds: "불소 1,500ppm 이하", fda: "Fluoride monograph", eu: "1,500ppm 이하 (Cosmetic)", matchRate: 90, judge: "✅ 일반적 기준 부합" },
+                    { rank: 2, name: "보건용 마스크 (KF94)", mfds: "분진포집효율 94% 이상", fda: "N95 (NIOSH 기준 95%)", eu: "FFP2 (EN 149 기준 94%)", matchRate: 80, judge: "⚠️ FDA 진출 시 N95 규격 시험 별도 필요" },
+                    { rank: 3, name: "손소독제 (Ethanol)", mfds: "에탄올 54.7~70v/v%", fda: "FDA OTC (60~95%)", eu: "Biocidal Products Regulation", matchRate: 85, judge: "✅ OTC Monograph 요건 충족" }
+                ]
+            },
+            cosmetic: {
+                foreign1Title: "미국 FDA (MoCRA)",
+                foreign2Title: "유럽 (CPNP)",
+                itemColTitle: "품목 (화장품 성분)",
+                data: [
+                    { rank: 1, name: "징크옥사이드 (Zinc Oxide)", mfds: "배합한도 25% 이하", fda: "배합한도 25% 이하 (OTC)", eu: "25% 이하 (나노 입자 규제 있음)", matchRate: 80, judge: "⚠️ 유럽 수출 시 나노물질 증명 추가 필요" },
+                    { rank: 2, name: "티타늄디옥사이드", mfds: "25% 이하", fda: "25% 이하", eu: "흡입 우려 제품에 나노 사용 제한", matchRate: 75, judge: "⚠️ 에어로졸/스프레이류 EU 배합 주의" },
+                    { rank: 3, name: "나이아신아마이드", mfds: "미백 기능성 고시 (2~5%)", fda: "제한 없음 (기능성 표방 시 검토)", eu: "제한 없음", matchRate: 90, judge: "✅ 안전성 자료만으로 진출 가능" },
+                    { rank: 4, name: "페녹시에탄올", mfds: "배합한도 1.0%", fda: "1.0% 이하 권장", eu: "배합한도 1.0%", matchRate: 100, judge: "✅ 글로벌 배합한도 일치" }
+                ]
+            },
+            device: {
+                foreign1Title: "미국 FDA (510k/PMA)",
+                foreign2Title: "유럽 (CE MDR)",
+                itemColTitle: "품목 (의료기기 분류)",
+                data: [
+                    { rank: 1, name: "디지털 혈압계", mfds: "2등급 (인증)", fda: "Class II (510k)", eu: "Class IIa (MDR 인증)", matchRate: 85, judge: "✅ 성능 시험 규격(IEC 80601) 공통 적용" },
+                    { rank: 2, name: "소프트 콘택트렌즈", mfds: "3등급 / 4등급", fda: "Class II / III", eu: "Class IIb", matchRate: 70, judge: "⚠️ 등급 분류 상이. 임상 평가(CER) 강화 대비" },
+                    { rank: 3, name: "AI 영상진단 S/W", mfds: "2~3등급 (식약처 혁신)", fda: "SaMD (Class II/De Novo)", eu: "Class IIa/IIb (MDR Rule 11)", matchRate: 60, judge: "⚠️ FDA De Novo 및 CE MDR Rule 11 등 엄격한 임상 근거 요망" }
+                ]
+            }
+        };
+
+        // 각 카테고리별로 30개 품목을 동적으로 생성 (상위 샘플을 기반으로 확장)
+        function generateFullMockData() {
+            const categories = ['pharma', 'quasi', 'cosmetic', 'device'];
+            
+            categories.forEach(cat => {
+                const baseData = mockCompareDataObj[cat].data;
+                const currentLen = baseData.length;
+                
+                for(let i = currentLen + 1; i <= 30; i++) {
+                    // 기존 데이터 중 하나를 템플릿으로 사용
+                    const tpl = baseData[i % currentLen];
+                    
+                    // 60~100 사이의 임의 일치율 생성
+                    const matchRate = Math.floor(Math.random() * 41) + 60; 
+                    
+                    let judgeStr = "✅ 글로벌 규격 완벽 조화";
+                    if(matchRate < 75) judgeStr = "⚠️ 국가별 규제 요건 큰 차이. 상세 분석 요망";
+                    else if(matchRate < 90) judgeStr = "⚠️ 일부 기준 불일치 (시험성적서 추가 요망)";
+
+                    // 구별을 위한 파생 제품명 생성
+                    const newName = `${tpl.name.split('(')[0].trim()} 파생형 ${String.fromCharCode(65 + (i % 5))}-${i}`;
+
+                    baseData.push({
+                        rank: i,
+                        name: newName,
+                        mfds: tpl.mfds,
+                        fda: tpl.fda,
+                        eu: tpl.eu,
+                        matchRate: matchRate,
+                        judge: judgeStr
+                    });
+                }
+            });
+        }
+        // 함수 즉시 실행
+        generateFullMockData();
+
+        let currentCompareTab = 'pharma';
+
+        // 1. 파일 업로드 처리 (원료 규격서)
+        function updateUploadStatus(input) {
+            if (input.files && input.files.length > 0) {
+                currentApiFileName = input.files[0].name;
+                document.getElementById('uploadedFileName').textContent = currentApiFileName;
+                
+                const fileListContainer = document.getElementById('uploadedFileList');
+                const fileIcon = document.getElementById('uploadFileIcon');
+                const fileLoader = document.getElementById('uploadLoader');
+                const statusText = document.getElementById('uploadFileStatusText');
+                const removeBtn = document.getElementById('removeFileBtn');
+
+                fileListContainer.classList.remove('hidden');
+                fileIcon.classList.add('hidden');
+                fileLoader.classList.remove('hidden');
+                statusText.textContent = "파일 분석 중...";
+                statusText.classList.remove('text-green-500', 'font-semibold');
+                statusText.classList.add('text-gray-500');
+                removeBtn.classList.add('hidden'); // 로딩 중에는 삭제 불가 처리
+
+                // 데이터 변형 (파일 재업로드 시 새로운 결과 렌더링을 위한 배열 셔플)
+                mockMissingData.sort(() => Math.random() - 0.5);
+
+                // 화면 초기화
+                resetView();
+
+                setTimeout(() => {
+                    fileLoader.classList.add('hidden');
+                    fileIcon.classList.remove('hidden');
+                    statusText.textContent = "✅ 파일 인식 완료";
+                    statusText.classList.remove('text-gray-500');
+                    statusText.classList.add('text-green-500', 'font-semibold');
+                    removeBtn.classList.remove('hidden');
+                    
+                    isApiSpecUploaded = true; // 플래그 활성화
+                }, 1000);
+            }
+        }
+
+        // 2. 로컬 폴더 연동 처리 (가상 데이터 리스트 표시)
+        function updateLocalFolderStatus(input) {
+            if (input.files && input.files.length > 0) {
+                document.getElementById('localFolderPrompt').classList.add('hidden');
+                const resultDiv = document.getElementById('localFolderResult');
+                const listUl = document.getElementById('mockCsvList');
+                
+                listUl.innerHTML = '';
+                
+                // 선택된 파일들의 이름으로 리스트 생성 (최대 5개까지만 표출)
+                const files = Array.from(input.files);
+                const displayFiles = files.slice(0, 5);
+                
+                displayFiles.forEach(file => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="text-green-400 font-bold mr-1">✅</span> ${file.name}`;
+                    listUl.appendChild(li);
+                });
+                
+                if (files.length > 5) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="text-gray-400 italic text-xs ml-4">+ 외 ${files.length - 5}건 더 있음</span>`;
+                    listUl.appendChild(li);
+                }
+                
+                resultDiv.classList.remove('hidden');
+                isLocalDbUploaded = true;
+                resetView();
+            }
+        }
+
+        function removeFile() {
+            document.getElementById('fileUpload').value = '';
+            document.getElementById('uploadedFileList').classList.add('hidden');
+            document.getElementById('uploadFileStatusText').textContent = "대기 중";
+            document.getElementById('uploadFileStatusText').classList.remove('text-green-500', 'font-semibold');
+            document.getElementById('uploadFileStatusText').classList.add('text-gray-500');
+            
+            isApiSpecUploaded = false;
+            currentApiFileName = "선택된 문서 없음";
+            resetView();
+        }
+
+        function resetView() {
+            document.getElementById('idleState').classList.remove('hidden');
+            document.getElementById('resultMissing').classList.add('hidden');
+            document.getElementById('resultCompare').classList.add('hidden');
+            document.getElementById('resultReport').classList.add('hidden');
+            document.getElementById('actionButtons').classList.add('hidden');
+        }
+
+        // 3. 누락 데이터 렌더링
+        function renderMissingData() {
+            const tbody = document.getElementById('missingTableBody');
+            tbody.innerHTML = '';
+            
+            let missingCount = 0;
+            let passCount = 0;
+
+            mockMissingData.forEach(item => {
+                if (item.isFail) missingCount++;
+                else passCount++;
+
+                const rowBg = item.isFail ? 'bg-red-50 border-b border-red-100' : 'bg-white border-b border-gray-100 opacity-80';
+                const statusBadge = item.isFail 
+                    ? `<span class="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">항목 누락</span>`
+                    : `<span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">적합</span>`;
+
+                tbody.innerHTML += `
+                    <tr class="${rowBg}">
+                        <td class="px-6 py-4 font-medium text-gray-900">${item.param}</td>
+                        <td class="px-6 py-4 ${item.isFail ? 'text-red-600 font-bold' : ''}">${item.docValue}</td>
+                        <td class="px-6 py-4">${item.mfdsLimit}</td>
+                        <td class="px-6 py-4">${statusBadge}</td>
+                        <td class="px-6 py-4 text-xs text-gray-600">${item.action}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('missingSummaryCards').innerHTML = `
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-red-500">
+                    <p class="text-sm text-gray-500 font-medium">검출된 누락 항목</p>
+                    <p class="text-2xl font-bold text-red-600 mt-1">${missingCount}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-green-500">
+                    <p class="text-sm text-gray-500 font-medium">정상 항목</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1">${passCount}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-blue-500">
+                    <p class="text-sm text-gray-500 font-medium">총 검토 항목</p>
+                    <p class="text-2xl font-bold text-navy-900 mt-1">${mockMissingData.length}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
+                </div>
+            `;
+        }
+
+        // 4. 비교 데이터 렌더링 (탭 스위칭 및 테이블 생성)
+        function switchCompareTab(tabId) {
+            // UI 상태 변경
+            const tabs = ['pharma', 'quasi', 'cosmetic', 'device'];
+            tabs.forEach(id => {
+                const btn = document.getElementById('tab-' + id);
+                if (id === tabId) {
+                    btn.classList.replace('border-transparent', 'border-brand-600');
+                    btn.classList.replace('text-gray-500', 'text-brand-600');
+                    btn.classList.add('font-bold');
+                    btn.classList.remove('font-semibold');
+                } else {
+                    btn.classList.replace('border-brand-600', 'border-transparent');
+                    btn.classList.replace('text-brand-600', 'text-gray-500');
+                    btn.classList.add('font-semibold');
+                    btn.classList.remove('font-bold');
+                }
+            });
+            
+            currentCompareTab = tabId;
+            
+            // 페이드 아웃 효과 후 렌더링
+            const wrapper = document.getElementById('compareContentWrapper');
+            wrapper.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                renderCompareTable();
+                wrapper.classList.remove('opacity-0');
+            }, 150);
+        }
+
+        function renderCompareTable() {
+            const tabData = mockCompareDataObj[currentCompareTab];
+            
+            // 헤더 동적 변경
+            document.getElementById('col-item-name').textContent = tabData.itemColTitle;
+            document.getElementById('col-foreign-1').textContent = tabData.foreign1Title;
+            document.getElementById('col-foreign-2').textContent = tabData.foreign2Title;
+
+            const tbody = document.getElementById('compareTableBody');
+            tbody.innerHTML = '';
+
+            tabData.data.forEach(item => {
+                // 일치율 바 시각화 (width 속성)
+                let barColor = 'bg-brand-500';
+                if(item.matchRate < 70) barColor = 'bg-red-500';
+                else if(item.matchRate < 90) barColor = 'bg-yellow-500';
+
+                const barHtml = `
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-1 overflow-hidden flex">
+                        <div class="${barColor} h-2.5 rounded-full transition-all duration-1000" style="width: ${item.matchRate}%"></div>
+                    </div>
+                `;
+
+                const judgeColor = item.judge.includes('✅') ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50 font-semibold';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition-colors group">
+                        <td class="px-4 py-3 text-center border-r border-gray-100">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-600 group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">${item.rank}</span>
+                        </td>
+                        <td class="px-4 py-3 font-medium text-gray-800 border-r border-gray-100">${item.name}</td>
+                        <td class="px-4 py-3 text-gray-600">${item.mfds}</td>
+                        <td class="px-4 py-3 border-l border-gray-100 text-gray-600">${item.fda}</td>
+                        <td class="px-4 py-3 border-r border-gray-100 text-gray-600">${item.eu}</td>
+                        <td class="px-4 py-3 border-r border-gray-100">
+                            <div class="flex justify-between items-center text-xs text-gray-500 mb-0.5">
+                                <span>일치율</span>
+                                <span class="font-bold text-gray-700">${item.matchRate}%</span>
+                            </div>
+                            ${barHtml}
+                        </td>
+                        <td class="px-4 py-3 text-sm ${judgeColor}">${item.judge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 결과 보기 로직 (가상 로딩 구현)
+        function showResult(type) {
+            // 글로벌 비교 탭은 파일 첨부 여부와 상관없이 무조건 동작
+            if (type !== 'compare') {
+                if (!isApiSpecUploaded) {
+                    alert("원료 규격서(API Spec)를 먼저 업로드해주세요.");
+                    return;
+                }
+                if (!isLocalDbUploaded) {
+                    alert("로컬 규제 데이터베이스 미첨부: 시스템에 기본 내장된 글로벌 규제 가이드라인(한국 식약처, ICH Q Guidelines, 미국 FDA)을 기준으로 규제 검토를 진행합니다.");
+                }
+            }
+
+            resetView();
+            document.getElementById('idleState').classList.add('hidden');
+            
+            const loader = document.getElementById('loadingState');
+            loader.classList.remove('hidden');
+
+            const loadingTexts = {
+                'missing': '식약처 및 ICH 규정 DB와 규격서를 대조중입니다...',
+                'compare': '국가별 약전 및 가이던스를 교차 분석중입니다...',
+                'report': '검토 결과 통계 및 리포트를 생성중입니다...'
+            };
+            document.getElementById('loadingText').textContent = loadingTexts[type];
+
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                document.getElementById('actionButtons').classList.remove('hidden');
+
+                const csvBtn = document.getElementById('csvDownloadBtn');
+
+                if (type === 'missing') {
+                    if(csvBtn) csvBtn.style.display = 'inline-block';
+                    renderMissingData();
+                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-magnifying-glass-chart text-brand-600 mr-2"></i>필수 항목 누락 검출 결과';
+                    document.getElementById('resultMissing').classList.remove('hidden');
+                } else if (type === 'compare') {
+                    if(csvBtn) csvBtn.style.display = 'none';
+                    switchCompareTab('pharma'); // 초기 탭 렌더링
+                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-code-compare text-brand-600 mr-2"></i>항목별 성분 규제 비교 현황 대시보드';
+                    document.getElementById('resultCompare').classList.remove('hidden');
+                } else if (type === 'report') {
+                    if(csvBtn) csvBtn.style.display = 'inline-block';
+                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-stopwatch text-brand-600 mr-2"></i>QA/RA 자동 검토 결과 보고서';
+                    document.getElementById('resultReport').classList.remove('hidden');
+                    
+                    // 동적 데이터 바인딩 적용
+                    renderReportData();
+                }
+            }, 1000);
+        }
+
+        function renderReportData() {
+            // 현재 시간 및 대상문서
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            document.getElementById('reportDate').textContent = dateStr;
+            document.getElementById('reportDocName').textContent = currentApiFileName;
+
+            let passCnt = 0;
+            let failCnt = 0;
+            const tBody = document.getElementById('reportTableBody');
+            const actionList = document.getElementById('actionItemsList');
+            tBody.innerHTML = '';
+            actionList.innerHTML = '';
+
+            mockMissingData.forEach(item => {
+                if(item.isFail) failCnt++;
+                else passCnt++;
+
+                const badge = item.isFail 
+                    ? `<span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded">OOS</span>` 
+                    : `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded">Pass</span>`;
+                
+                tBody.innerHTML += `
+                    <tr>
+                        <td class="px-4 py-3 border-b border-gray-100 font-medium text-gray-800">${item.param}</td>
+                        <td class="px-4 py-3 border-b border-gray-100 ${item.isFail ? 'text-red-600 font-bold' : 'text-gray-600'}">${item.docValue}</td>
+                        <td class="px-4 py-3 border-b border-gray-100 text-gray-600">${item.mfdsLimit}</td>
+                        <td class="px-4 py-3 border-b border-gray-100 text-center">${badge}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('reportPassCount').textContent = passCnt;
+            document.getElementById('reportFailCount').textContent = failCnt;
+
+            // Action Items
+            const failItems = mockMissingData.filter(item => item.isFail);
+            if(failItems.length === 0) {
+                actionList.innerHTML = `<li class="text-sm text-green-600 font-bold"><i class="fa-solid fa-check-circle mr-2"></i>모든 항목이 정상 규격 범위 내에 있습니다.</li>`;
+            } else {
+                failItems.forEach(item => {
+                    actionList.innerHTML += `
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 mt-1 mr-3"></i>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">⚠️ [OOS] ${item.param} - eCTD Module 3 품질 평가 보완 요망</p>
+                                <p class="text-xs text-gray-600 mt-0.5">상세 사유: 현재 기재된 '${item.docValue}'는 식약처 요구 기준('${item.mfdsLimit}')을 이탈함. ${item.action}</p>
+                            </div>
+                        </li>
+                    `;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
