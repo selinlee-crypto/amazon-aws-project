@@ -73,10 +73,11 @@
                 display: block !important;
             }
 
-            /* 3. 불필요 UI 강제 숨김 */
-            body aside, 
+            /* 3. 불필요 UI 강제 숨김 (구체성을 극대화하여 flex block 속성을 덮어씀) */
+            body aside.w-72.flex, 
+            body main > section.w-1\/3.flex, 
             body main > section:first-of-type, 
-            body main > section:last-of-type > div:first-of-type,
+            body #actionButtons,
             body #idleState, 
             body #loadingState,
             body #compareTabs ~ div {
