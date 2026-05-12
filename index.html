@@ -731,3 +731,522 @@
                 // 화면 초기화
                 resetView();
 
+                // 확장자에 따른 파싱 로직 적용
+                if (file.name.toLowerCase().endsWith('.csv')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const text = e.target.result;
+                            currentAnalysisData = parseCSV(text);
+                            if(currentAnalysisData.length === 0) throw new Error("파싱된 데이터 항목이 없습니다.");
+                            finalizeUploadUI();
+                        } catch (error) {
+                            alert("CSV 파일을 파싱하는 중 에러가 발생했습니다:\n" + error.message + "\n기본 샘플 데이터로 대체하여 진행합니다.");
+                            currentAnalysisData = getFallbackData();
+                            finalizeUploadUI();
+                        }
+                    };
+                    reader.onerror = function() {
+                        alert("파일을 읽을 수 없습니다. 기본 샘플 데이터로 대체하여 진행합니다.");
+                        currentAnalysisData = getFallbackData();
+                        finalizeUploadUI();
+                    };
+                    reader.readAsText(file);
+                } else {
+                    // CSV가 아닌 기타 파일의 경우 (가상 데이터 적용)
+                    setTimeout(() => {
+                        currentAnalysisData = getFallbackData();
+                        finalizeUploadUI();
+                    }, 800);
+                }
+
+                function finalizeUploadUI() {
+                    setTimeout(() => {
+                        fileLoader.classList.add('hidden');
+                        fileIcon.classList.remove('hidden');
+                        statusText.textContent = "✅ 파일 인식 및 데이터 추출 완료";
+                        statusText.classList.remove('text-gray-500');
+                        statusText.classList.add('text-green-500', 'font-semibold');
+                        removeBtn.classList.remove('hidden');
+                        
+                        isApiSpecUploaded = true;
+                    }, 500);
+                }
+            }
+        }
+
+        // 2. 로컬 폴더 연동 처리
+        function updateLocalFolderStatus(input) {
+            if (input.files && input.files.length > 0) {
+                document.getElementById('localFolderPrompt').classList.add('hidden');
+                const resultDiv = document.getElementById('localFolderResult');
+                const listUl = document.getElementById('mockCsvList');
+                
+                listUl.innerHTML = '';
+                
+                const files = Array.from(input.files);
+                const displayFiles = files.slice(0, 5);
+                
+                displayFiles.forEach(file => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="text-green-400 font-bold mr-1">✅</span> ${file.name}`;
+                    listUl.appendChild(li);
+                });
+                
+                if (files.length > 5) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="text-gray-400 italic text-xs ml-4">+ 외 ${files.length - 5}건 더 있음</span>`;
+                    listUl.appendChild(li);
+                }
+                
+                resultDiv.classList.remove('hidden');
+                isLocalDbUploaded = true;
+                resetView();
+            }
+        }
+
+        function removeFile() {
+            document.getElementById('fileUpload').value = '';
+            document.getElementById('uploadedFileList').classList.add('hidden');
+            document.getElementById('uploadFileStatusText').textContent = "대기 중";
+            document.getElementById('uploadFileStatusText').classList.remove('text-green-500', 'font-semibold');
+            document.getElementById('uploadFileStatusText').classList.add('text-gray-500');
+            
+            isApiSpecUploaded = false;
+            currentApiFileName = "선택된 문서 없음";
+            currentAnalysisData = [];
+            resetView();
+        }
+
+        function resetView() {
+            document.getElementById('idleState').classList.remove('hidden');
+            document.getElementById('resultMissing').classList.add('hidden');
+            document.getElementById('resultCompare').classList.add('hidden');
+            document.getElementById('resultReport').classList.add('hidden');
+            document.getElementById('actionButtons').classList.add('hidden');
+        }
+
+        // 공통 다운로드 함수 (CSV)
+        function downloadCSV() {
+            if(!isApiSpecUploaded && !isLocalDbUploaded) {
+                alert("결과가 생성되지 않았습니다.");
+                return;
+            }
+            
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // 한글 깨짐 방지 BOM 추가
+            csvContent += "항목명,문서 내 기재값,규제 기준,상태,권고사항\r\n";
+            
+            evaluatedGlobalData.forEach(item => {
+                csvContent += `"${item.param}","${item.docValue}","${item.mfdsLimit}","${item.statusText}","${item.action}"\r\n`;
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "결과보고서.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 3. 누락 데이터 (Missing) 렌더링
+        function renderMissingData() {
+            // 검토 전 로직 적용
+            evaluatedGlobalData = evaluateData(currentAnalysisData);
+
+            const tbody = document.getElementById('missingTableBody');
+            tbody.innerHTML = '';
+            
+            let missingCount = 0;
+            let passCount = 0;
+
+            evaluatedGlobalData.forEach(item => {
+                if (item.isFail) missingCount++;
+                else passCount++;
+
+                const rowBg = item.isFail ? 'bg-red-50 border-b border-red-100' : 'bg-white border-b border-gray-100 opacity-80';
+                
+                let badgeClass = item.isFail ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
+                const statusBadge = `<span class="${badgeClass} text-xs font-semibold px-2 py-1 rounded">${item.statusText}</span>`;
+
+                tbody.innerHTML += `
+                    <tr class="${rowBg}">
+                        <td class="px-6 py-4 font-medium text-gray-900">${item.param}</td>
+                        <td class="px-6 py-4 ${item.isFail ? 'text-red-600 font-bold' : ''}">${item.docValue}</td>
+                        <td class="px-6 py-4">${item.mfdsLimit}</td>
+                        <td class="px-6 py-4">${statusBadge}</td>
+                        <td class="px-6 py-4 text-xs text-gray-600">${item.action}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('missingSummaryCards').innerHTML = `
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-red-500">
+                    <p class="text-sm text-gray-500 font-medium">검출된 규격 이탈/누락</p>
+                    <p class="text-2xl font-bold text-red-600 mt-1">${missingCount}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-green-500">
+                    <p class="text-sm text-gray-500 font-medium">정상 통과 항목</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1">${passCount}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-blue-500">
+                    <p class="text-sm text-gray-500 font-medium">총 검토 항목</p>
+                    <p class="text-2xl font-bold text-navy-900 mt-1">${evaluatedGlobalData.length}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
+                </div>
+            `;
+        }
+
+        // 4. 비교 데이터 렌더링 및 글로벌 검색 필터
+        function applyCompareFilter() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const filterState = document.getElementById('filterDropdown').value; // 'all', 'pass', 'fail'
+            
+            const rows = document.querySelectorAll('#compareTableBody tr');
+            rows.forEach(row => {
+                if(row.cells.length < 7) return;
+                
+                const itemName = row.cells[1].innerText.toLowerCase();
+                const judgeText = row.cells[6].innerText;
+                
+                let textMatch = itemName.includes(searchText);
+                
+                let filterMatch = true;
+                if (filterState === 'pass') {
+                    filterMatch = judgeText.includes('✅');
+                } else if (filterState === 'fail') {
+                    filterMatch = judgeText.includes('⚠️') || judgeText.includes('❌');
+                }
+                
+                if (textMatch && filterMatch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function switchCompareTab(tabId) {
+            const tabs = ['pharma', 'quasi', 'cosmetic', 'device'];
+            tabs.forEach(id => {
+                const btn = document.getElementById('tab-' + id);
+                if (id === tabId) {
+                    btn.classList.replace('border-transparent', 'border-brand-600');
+                    btn.classList.replace('text-gray-500', 'text-brand-600');
+                    btn.classList.add('font-bold');
+                    btn.classList.remove('font-semibold');
+                } else {
+                    btn.classList.replace('border-brand-600', 'border-transparent');
+                    btn.classList.replace('text-brand-600', 'text-gray-500');
+                    btn.classList.add('font-semibold');
+                    btn.classList.remove('font-bold');
+                }
+            });
+            
+            currentCompareTab = tabId;
+            
+            const wrapper = document.getElementById('compareContentWrapper');
+            wrapper.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                renderCompareTable();
+                applyCompareFilter(); // 탭 전환 시 기존 필터 조건 재적용
+                wrapper.classList.remove('opacity-0');
+            }, 150);
+        }
+
+        function renderCompareTable() {
+            const tabData = mockCompareDataObj[currentCompareTab];
+            
+            document.getElementById('col-item-name').textContent = tabData.itemColTitle;
+            document.getElementById('col-foreign-1').textContent = tabData.foreign1Title;
+            document.getElementById('col-foreign-2').textContent = tabData.foreign2Title;
+
+            const tbody = document.getElementById('compareTableBody');
+            tbody.innerHTML = '';
+
+            tabData.data.forEach(item => {
+                let barColor = 'bg-brand-500';
+                if(item.matchRate < 70) barColor = 'bg-red-500';
+                else if(item.matchRate < 90) barColor = 'bg-yellow-500';
+
+                const barHtml = `
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-1 overflow-hidden flex">
+                        <div class="${barColor} h-2.5 rounded-full transition-all duration-1000" style="width: ${item.matchRate}%"></div>
+                    </div>
+                `;
+
+                const judgeColor = item.judge.includes('✅') ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50 font-semibold';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition-colors group">
+                        <td class="px-4 py-3 text-center border-r border-gray-100">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-600 group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">${item.rank}</span>
+                        </td>
+                        <td class="px-4 py-3 font-medium text-gray-800 border-r border-gray-100">${item.name}</td>
+                        <td class="px-4 py-3 text-gray-600">${item.mfds}</td>
+                        <td class="px-4 py-3 border-l border-gray-100 text-gray-600">${item.fda}</td>
+                        <td class="px-4 py-3 border-r border-gray-100 text-gray-600">${item.eu}</td>
+                        <td class="px-4 py-3 border-r border-gray-100">
+                            <div class="flex justify-between items-center text-xs text-gray-500 mb-0.5">
+                                <span>일치율</span>
+                                <span class="font-bold text-gray-700">${item.matchRate}%</span>
+                            </div>
+                            ${barHtml}
+                        </td>
+                        <td class="px-4 py-3 text-sm ${judgeColor}">${item.judge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Chart.js 시각화 로직
+        function renderChart(data) {
+            const ctx = document.getElementById('resultChart');
+            if (!ctx) return;
+            if (myChart) myChart.destroy(); // 기존 차트 인스턴스 소멸
+            
+            // 시각화는 수치 비교가 가능한 항목들만 대상으로 함
+            const chartData = data.filter(d => d.actualValue !== null && d.mfdsValue !== null);
+
+            const labels = chartData.map(d => d.param);
+            const actualValues = chartData.map(d => d.actualValue);
+            const mfdsValues = chartData.map(d => d.mfdsValue);
+            
+            const internalInput = document.getElementById('internalSpecInput').value;
+            const internalSpecValue = internalInput !== "" ? parseFloat(internalInput) : null;
+            const internalValues = chartData.map(d => internalSpecValue !== null ? internalSpecValue : 0);
+
+            const datasets = [
+                {
+                    label: '식약처 요구 기준 (MFDS)',
+                    data: mfdsValues,
+                    backgroundColor: 'rgba(54, 162, 235, 0.4)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }
+            ];
+
+            if (internalSpecValue !== null) {
+                datasets.push({
+                    label: `사내 관리 기준 (${internalInput})`,
+                    data: internalValues,
+                    backgroundColor: 'rgba(255, 159, 64, 0.4)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                });
+            }
+
+            // 조건부 색상 적용 (기준 이탈시 빨간색, 통과시 초록색)
+            const actualColors = chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)');
+            const actualBorders = chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)');
+
+            datasets.push({
+                label: '실제 문서 기재값',
+                data: actualValues,
+                backgroundColor: actualColors,
+                borderColor: actualBorders,
+                borderWidth: 1
+            });
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '수치 / 비율 (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 결과 보기 로직 (가상 로딩 구현)
+        function showResult(type) {
+            if (type !== 'compare') {
+                if (!isApiSpecUploaded) {
+                    alert("원료 규격서(API Spec) 파일을 먼저 업로드해주세요.");
+                    return;
+                }
+                if (!isLocalDbUploaded) {
+                    alert("로컬 규제 데이터베이스 미첨부: 시스템에 기본 내장된 글로벌 규제 가이드라인(한국 식약처, ICH Q Guidelines, 미국 FDA)을 기준으로 규제 검토를 진행합니다.");
+                }
+            }
+
+            resetView();
+            document.getElementById('idleState').classList.add('hidden');
+            
+            const loader = document.getElementById('loadingState');
+            loader.classList.remove('hidden');
+
+            const loadingTexts = {
+                'missing': '식약처 및 사내 기준과 규격서를 대조중입니다...',
+                'compare': '국가별 약전 및 가이던스를 교차 분석중입니다...',
+                'report': '검토 결과 통계, 시각화 차트 및 리포트를 생성중입니다...'
+            };
+            document.getElementById('loadingText').textContent = loadingTexts[type];
+
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                document.getElementById('actionButtons').classList.remove('hidden');
+
+                const csvBtn = document.getElementById('csvDownloadBtn');
+                const printBtn = document.getElementById('printReportBtn');
+
+                if (type === 'missing') {
+                    if(csvBtn) csvBtn.style.display = 'inline-block';
+                    if(printBtn) printBtn.style.display = 'inline-block';
+                    renderMissingData();
+                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-magnifying-glass-chart text-brand-600 mr-2"></i>필수 항목 누락 및 기준 이탈 검출 결과';
+                    document.getElementById('resultMissing').classList.remove('hidden');
+                } else if (type === 'compare') {
+                    if(csvBtn) csvBtn.style.display = 'none';
+                    if(printBtn) printBtn.style.display = 'none'; // 비교 현황 탭에서 출력 버튼 숨김
+                    switchCompareTab('pharma');
+                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-code-compare text-brand-600 mr-2"></i>항목별 성분 규제 비교 현황 대시보드';
+                    document.getElementById('resultCompare').classList.remove('hidden');
+                } else if (type === 'report') {
+                    if(csvBtn) csvBtn.style.display = 'inline-block';
+                    if(printBtn) printBtn.style.display = 'inline-block';
+                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-stopwatch text-brand-600 mr-2"></i>QA/RA 자동 검토 결과 보고서';
+                    document.getElementById('resultReport').classList.remove('hidden');
+                    
+                    renderReportData();
+                }
+            }, 1000);
+        }
+
+        function renderReportData() {
+            evaluatedGlobalData = evaluateData(currentAnalysisData);
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            document.getElementById('reportDate').textContent = dateStr;
+            document.getElementById('reportDocName').textContent = currentApiFileName;
+
+            let passCnt = 0;
+            let failCnt = 0;
+            const tBody = document.getElementById('reportTableBody');
+            const actionList = document.getElementById('actionItemsList');
+            tBody.innerHTML = '';
+            actionList.innerHTML = '';
+
+            const internalInput = document.getElementById('internalSpecInput').value;
+
+            evaluatedGlobalData.forEach(item => {
+                if(item.isFail) failCnt++;
+                else passCnt++;
+
+                const badge = item.isFail 
+                    ? `<span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded">Fail</span>` 
+                    : `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded">Pass</span>`;
+                
+                let judgeStr = `MFDS: ${item.mfdsPass ? 'Pass' : 'Fail'}`;
+                if (internalInput) {
+                    judgeStr += `<br><span class="${item.internalPass ? 'text-green-600 font-semibold' : 'text-red-600 font-bold'}">Internal: ${item.internalPass ? 'Pass' : 'Fail'}</span>`;
+                }
+
+                tBody.innerHTML += `
+                    <tr>
+                        <td class="px-4 py-3 border-b border-gray-100 font-medium text-gray-800">${item.param}</td>
+                        <td class="px-4 py-3 border-b border-gray-100 ${item.isFail ? 'text-red-600 font-bold' : 'text-gray-600'}">${item.docValue}</td>
+                        <td class="px-4 py-3 border-b border-gray-100 text-gray-600">${item.mfdsLimit}</td>
+                        <td class="px-4 py-3 border-b border-gray-100 text-center text-xs leading-tight">
+                            ${badge}<br><span class="inline-block mt-1">${judgeStr}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('reportPassCount').textContent = passCnt;
+            document.getElementById('reportFailCount').textContent = failCnt;
+
+            const failItems = evaluatedGlobalData.filter(item => item.isFail);
+            if(failItems.length === 0) {
+                actionList.innerHTML = `<li class="text-sm text-green-600 font-bold"><i class="fa-solid fa-check-circle mr-2"></i>모든 항목이 규제 및 사내 기준 범위 내에 있습니다.</li>`;
+            } else {
+                failItems.forEach(item => {
+                    actionList.innerHTML += `
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 mt-1 mr-3"></i>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">⚠️ [OOS/OOT] ${item.param} - 품질 평가 보완 요망</p>
+                                <p class="text-xs text-gray-600 mt-0.5">상세 사유: 현재 기재된 '${item.docValue}'는 규제 또는 사내 기준을 이탈함. ${item.action}</p>
+                            </div>
+                        </li>
+                    `;
+                });
+            }
+
+            // 시각화 차트 렌더링 호출
+            renderChart(evaluatedGlobalData);
+        }
+
+        // --- 🚨 인쇄 버그 원천 차단을 위한 자바스크립트 강제 개입 🚨 ---
+        // 브라우저의 인쇄 대화상자가 열리기 직전과 닫힌 직후에 실행됩니다.
+        window.addEventListener('beforeprint', () => {
+            // 1. 혼재 출력 방지: hidden 클래스가 있는 탭은 인쇄 직전 DOM 레벨에서 아예 display: none 박아버림 (어떤 CSS보다 강력함)
+            const views = ['resultMissing', 'resultCompare', 'resultReport'];
+            views.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    if(el.classList.contains('hidden')) {
+                        el.style.setProperty('display', 'none', 'important');
+                        el.style.setProperty('opacity', '0', 'important');
+                    } else {
+                        el.style.setProperty('display', 'block', 'important');
+                    }
+                }
+            });
+
+            // 2. 크롬 빈 페이지 버그 방지: 스크롤 및 고정 높이 완벽 해제
+            const scrollContainers = document.querySelectorAll('.overflow-y-auto, .h-full, .h-screen, .flex-1, .flex, .flex-col');
+            scrollContainers.forEach(el => {
+                if(!el.classList.contains('hidden')) {
+                    el.style.setProperty('overflow', 'visible', 'important');
+                    el.style.setProperty('height', 'auto', 'important');
+                    el.style.setProperty('max-height', 'none', 'important');
+                }
+            });
+        });
+
+        window.addEventListener('afterprint', () => {
+            // 인쇄 완료 후 인라인 스타일 정리 (원래 상태로 복구)
+            const views = ['resultMissing', 'resultCompare', 'resultReport'];
+            views.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.style.removeProperty('display');
+                    el.style.removeProperty('opacity');
+                }
+            });
+
+            const scrollContainers = document.querySelectorAll('.overflow-y-auto, .h-full, .h-screen, .flex-1, .flex, .flex-col');
+            scrollContainers.forEach(el => {
+                el.style.removeProperty('overflow');
+                el.style.removeProperty('height');
+                el.style.removeProperty('max-height');
+            });
+        });
+    </script>
+</body>
+</html>
