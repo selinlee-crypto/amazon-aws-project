@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>?섏빟???먮즺 洹쒓꺽??寃???먮룞????쒕낫??/title>
+    <title>의약품 원료 규격서 검토 자동화 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -42,14 +42,14 @@
             background: #94a3b8; 
         }
 
-        /* ?몄뇙???붾㈃ 理쒖쟻??(蹂닿퀬???곸뿭 ?꾩슜) */
+        /* 인쇄용 화면 최적화 (보고서 영역 전용) */
         @media print {
             @page {
                 size: A4 portrait;
                 margin: 15mm;
             }
 
-            /* 1. 理쒖긽??而⑦뀒?대꼫 媛뺤젣 ?믪씠 ?댁젣 (?щ＼ 鍮??섏씠吏 踰꾧렇 李⑤떒) */
+            /* 1. 최상위 컨테이너 강제 높이 해제 (크롬 빈 페이지 버그 차단) */
             html, body {
                 display: block !important;
                 height: auto !important;
@@ -60,7 +60,7 @@
                 background-color: white !important;
             }
 
-            /* 2. ?꾩껜 ?덉씠?꾩썐 Flex 諛??ㅽ겕濡?媛뺤젣 ?댁젣 (援ъ껜??媛뺥솕) */
+            /* 2. 전체 레이아웃 Flex 및 스크롤 강제 해제 (구체성 강화) */
             body main, body section, body div, body aside {
                 height: auto !important;
                 max-height: none !important;
@@ -68,12 +68,12 @@
                 position: static !important;
             }
 
-            /* Tailwind??Flex/Height ?대옒??臾댄슚??*/
+            /* Tailwind의 Flex/Height 클래스 무효화 */
             body .flex, body .flex-col, body .flex-1, body .h-full, body .h-screen {
                 display: block !important;
             }
 
-            /* 3. 遺덊븘??UI 媛뺤젣 ?④? */
+            /* 3. 불필요 UI 강제 숨김 */
             body aside, 
             body main > section:first-of-type, 
             body main > section:last-of-type > div:first-of-type,
@@ -83,8 +83,8 @@
                 display: none !important;
             }
 
-            /* 4. 狩먲툘 ?쇱옱 異쒕젰 ?꾨꼍 李⑤떒 狩먲툘
-               ?대뼡 display ?띿꽦蹂대떎??臾댁“嫄??④? 泥섎━?섎룄濡?援ъ껜??Specificity)??理쒕?濡??믪엫 */
+            /* 4. ⭐️ 혼재 출력 완벽 차단 ⭐️
+               어떤 display 속성보다도 무조건 숨김 처리되도록 구체성(Specificity)을 최대로 높임 */
             body #resultReport.hidden, 
             body #resultCompare.hidden, 
             body #resultMissing.hidden,
@@ -94,18 +94,18 @@
                 visibility: hidden !important;
             }
 
-            /* 5. ?щ＼ ?뚯씠釉?怨듬갚/?섎┝ 踰꾧렇 ?꾨꼍 李⑤떒 */
+            /* 5. 크롬 테이블 공백/잘림 버그 완벽 차단 */
             table {
                 display: table !important;
                 width: 100% !important;
-                /* border-collapse: collapse媛 flex ?섑띁? 留뚮굹 ?쒕? ?ㅼ쓬 ?섏씠吏濡??듭㎏濡?諛?대궡??踰꾧렇 ?닿껐 */
+                /* border-collapse: collapse가 flex 래퍼와 만나 표를 다음 페이지로 통째로 밀어내는 버그 해결 */
                 border-collapse: separate !important;
                 border-spacing: 0 !important;
                 page-break-inside: auto !important;
             }
             
             thead, tbody {
-                display: table-row-group !important; /* table-header-group ?덈? 湲덉? */
+                display: table-row-group !important; /* table-header-group 절대 금지 */
             }
 
             tr {
@@ -133,22 +133,22 @@
 </head>
 <body class="bg-gray-100 text-gray-800 h-screen overflow-hidden flex font-sans">
 
-    <!-- 醫뚯륫 ?ъ씠?쒕컮: 洹쒖젣 ?곗씠?곕쿋?댁뒪 -->
+    <!-- 좌측 사이드바: 규제 데이터베이스 -->
     <aside class="w-72 bg-navy-900 text-white flex flex-col h-full shadow-lg z-10">
         <div class="p-6 border-b border-navy-800">
             <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-shield-halved mr-2 text-brand-500"></i>ReguCheck</h1>
-            <p class="text-xs text-gray-400 mt-1">?먮즺 洹쒓꺽???먮룞 寃????쒕낫??/p>
+            <p class="text-xs text-gray-400 mt-1">원료 규격서 자동 검토 대시보드</p>
         </div>
 
         <div class="p-6 flex-1 overflow-y-auto">
-            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">湲濡쒕쾶 洹쒖젣 媛?대뱶?쇱씤</h2>
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">글로벌 규제 가이드라인</h2>
             <ul class="space-y-3 mb-8">
                 <li>
                     <a href="https://nedrug.mfds.go.kr/" target="_blank" class="flex items-center p-3 rounded-lg bg-navy-800 hover:bg-brand-600 transition-colors border border-navy-800 hover:border-brand-500 group">
                         <i class="fa-solid fa-globe text-gray-400 group-hover:text-white w-6"></i>
                         <div class="ml-2">
-                            <span class="block text-sm font-medium">?쒓뎅 ?앹빟泥?(MFDS)</span>
-                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">?섏빟?덉븞?꾨굹??/span>
+                            <span class="block text-sm font-medium">한국 식약처 (MFDS)</span>
+                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">의약품안전나라</span>
                         </div>
                         <i class="fa-solid fa-arrow-up-right-from-square ml-auto text-xs text-gray-500 group-hover:text-gray-300"></i>
                     </a>
@@ -158,7 +158,7 @@
                         <i class="fa-solid fa-book-medical text-gray-400 group-hover:text-white w-6"></i>
                         <div class="ml-2">
                             <span class="block text-sm font-medium">ICH Q Guidelines</span>
-                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">?덉쭏 媛?대뱶?쇱씤</span>
+                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">품질 가이드라인</span>
                         </div>
                         <i class="fa-solid fa-arrow-up-right-from-square ml-auto text-xs text-gray-500 group-hover:text-gray-300"></i>
                     </a>
@@ -167,29 +167,29 @@
                     <a href="https://www.fda.gov/regulatory-information/search-fda-guidance-documents" target="_blank" class="flex items-center p-3 rounded-lg bg-navy-800 hover:bg-brand-600 transition-colors border border-navy-800 hover:border-brand-500 group">
                         <i class="fa-solid fa-building-flag text-gray-400 group-hover:text-white w-6"></i>
                         <div class="ml-2">
-                            <span class="block text-sm font-medium">誘멸뎅 FDA</span>
-                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">?섏빟??媛?대뜕??/span>
+                            <span class="block text-sm font-medium">미국 FDA</span>
+                            <span class="block text-xs text-gray-400 group-hover:text-gray-200 mt-0.5">의약품 가이던스</span>
                         </div>
                         <i class="fa-solid fa-arrow-up-right-from-square ml-auto text-xs text-gray-500 group-hover:text-gray-300"></i>
                     </a>
                 </li>
             </ul>
 
-            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">濡쒖뺄 洹쒖젣 ?곗씠?곕쿋?댁뒪</h2>
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">로컬 규제 데이터베이스</h2>
             <div class="bg-navy-800 rounded-lg p-4 border border-dashed border-gray-600 text-center relative">
                 <div id="localFolderPrompt">
                     <i class="fa-solid fa-folder-open text-2xl text-gray-400 mb-2"></i>
-                    <p class="text-sm text-gray-300 mb-3">?대? 洹쒖젣 ?뚯씪(CSV, Excel) ?낅줈??/p>
+                    <p class="text-sm text-gray-300 mb-3">내부 규제 파일(CSV, Excel) 업로드</p>
                     <label class="cursor-pointer bg-navy-900 hover:bg-gray-700 text-white text-xs py-2 px-4 rounded transition-colors inline-block border border-gray-600">
-                        <i class="fa-solid fa-upload mr-1"></i> ?뚯씪 ?좏깮
+                        <i class="fa-solid fa-upload mr-1"></i> 파일 선택
                         <input type="file" multiple accept=".csv, .xlsx, .xls" class="hidden" onchange="updateLocalFolderStatus(this)">
                     </label>
                 </div>
                 
                 <div id="localFolderResult" class="hidden text-left mt-2">
-                    <p class="text-xs font-semibold text-green-400 mb-2 border-b border-navy-700 pb-1"><i class="fa-solid fa-check-circle mr-1"></i>?곗씠???곕룞 ?꾨즺</p>
+                    <p class="text-xs font-semibold text-green-400 mb-2 border-b border-navy-700 pb-1"><i class="fa-solid fa-check-circle mr-1"></i>데이터 연동 완료</p>
                     <ul class="text-xs text-gray-300 space-y-1.5" id="mockCsvList">
-                        <!-- JS?먯꽌 ?뚮뜑留???-->
+                        <!-- JS에서 렌더링 됨 -->
                     </ul>
                 </div>
             </div>
@@ -200,41 +200,41 @@
         </div>
     </aside>
 
-    <!-- 以묒븰/?곗륫 而⑦뀒?대꼫 -->
+    <!-- 중앙/우측 컨테이너 -->
     <main class="flex-1 flex overflow-hidden">
         
-        <!-- 以묒븰: 硫붿씤 ?≪뀡 -->
+        <!-- 중앙: 메인 액션 -->
         <section class="w-1/3 min-w-[350px] max-w-[450px] bg-gray-50 border-r border-gray-200 flex flex-col h-full shadow-inner z-0">
             <div class="p-6 border-b border-gray-200 bg-white">
-                <h2 class="text-lg font-bold text-navy-900"><i class="fa-solid fa-file-contract mr-2 text-brand-500"></i>遺꾩꽍 ?ㅼ젙</h2>
-                <p class="text-sm text-gray-500 mt-1">寃?좏븷 ?먮즺 洹쒓꺽?쒕? ?낅줈?쒗븯怨??묒뾽???좏깮?섏꽭??</p>
+                <h2 class="text-lg font-bold text-navy-900"><i class="fa-solid fa-file-contract mr-2 text-brand-500"></i>분석 설정</h2>
+                <p class="text-sm text-gray-500 mt-1">검토할 원료 규격서를 업로드하고 작업을 선택하세요.</p>
             </div>
             
             <div class="p-6 flex-1 overflow-y-auto">
-                <!-- ?뚯씪 ?낅줈???곸뿭 -->
+                <!-- 파일 업로드 영역 -->
                 <div class="mb-6">
-                    <label class="block text-sm font-semibold text-navy-900 mb-2">?먮즺 洹쒓꺽??(API Spec) ?낅줈??/label>
+                    <label class="block text-sm font-semibold text-navy-900 mb-2">원료 규격서 (API Spec) 업로드</label>
                     <div class="border-2 border-dashed border-gray-300 bg-white rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-brand-500 hover:bg-blue-50 transition-colors cursor-pointer" onclick="document.getElementById('fileUpload').click()">
                         <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
                             <i class="fa-solid fa-file-arrow-up text-brand-600 text-xl"></i>
                         </div>
-                        <p class="text-sm font-medium text-gray-700">?ш린濡??뚯씪???쒕옒洹명븯嫄곕굹 ?대┃?섏뿬 ?낅줈??/p>
-                        <p class="text-xs text-gray-500 mt-1">吏???щ㎎: CSV (?섏튂 ?곗씠???뚯떛 吏??, PDF, DOCX, XLSX</p>
+                        <p class="text-sm font-medium text-gray-700">여기로 파일을 드래그하거나 클릭하여 업로드</p>
+                        <p class="text-xs text-gray-500 mt-1">지원 포맷: CSV (수치 데이터 파싱 지원), PDF, DOCX, XLSX</p>
                         <input type="file" id="fileUpload" class="hidden" onchange="updateUploadStatus(this)" accept=".csv,.pdf,.docx,.xlsx">
                     </div>
                     
-                    <!-- ?낅줈?쒕맂 ?뚯씪 由ъ뒪??-->
+                    <!-- 업로드된 파일 리스트 -->
                     <div id="uploadedFileList" class="mt-3 space-y-2 hidden">
                         <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
                             <div class="flex items-center">
-                                <!-- ?곹깭 ?꾩씠肄?諛?濡쒕뜑 -->
+                                <!-- 상태 아이콘 및 로더 -->
                                 <div id="uploadFileIconWrapper" class="mr-3 w-6 flex justify-center">
                                     <i id="uploadFileIcon" class="fa-solid fa-file-csv text-green-600 text-lg"></i>
                                     <div id="uploadLoader" class="hidden animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600"></div>
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-gray-800" id="uploadedFileName">API_Spec.csv</p>
-                                    <p class="text-xs text-gray-500 transition-colors" id="uploadFileStatusText">?湲?以?/p>
+                                    <p class="text-xs text-gray-500 transition-colors" id="uploadFileStatusText">대기 중</p>
                                 </div>
                             </div>
                             <button id="removeFileBtn" class="text-gray-400 hover:text-red-500 transition-colors" onclick="removeFile()">
@@ -244,24 +244,24 @@
                     </div>
                 </div>
 
-                <!-- ?щ궡 愿由?湲곗? ?ㅼ젙 -->
+                <!-- 사내 관리 기준 설정 -->
                 <div class="mb-6 border-t border-gray-200 pt-6">
-                    <label class="block text-sm font-semibold text-navy-900 mb-2">?щ궡 愿由?湲곗?(%) ?ㅼ젙 (?좏깮)</label>
-                    <input type="number" id="internalSpecInput" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-brand-500 focus:outline-none" placeholder="?? 0.08" step="0.01">
-                    <p class="text-xs text-gray-500 mt-1">?낅젰 ???앹빟泥?湲곗?怨??④퍡 ?щ궡 湲곗?(Internal Spec) 援먯감 寃利앹쓣 ?섑뻾?⑸땲??</p>
+                    <label class="block text-sm font-semibold text-navy-900 mb-2">사내 관리 기준(%) 설정 (선택)</label>
+                    <input type="number" id="internalSpecInput" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:border-brand-500 focus:outline-none" placeholder="예: 0.08" step="0.01">
+                    <p class="text-xs text-gray-500 mt-1">입력 시 식약처 기준과 함께 사내 기준(Internal Spec) 교차 검증을 수행합니다.</p>
                 </div>
 
-                <!-- ?≪뀡 踰꾪듉 -->
+                <!-- 액션 버튼 -->
                 <div>
-                    <label class="block text-sm font-semibold text-navy-900 mb-3">寃???≪뀡</label>
+                    <label class="block text-sm font-semibold text-navy-900 mb-3">검토 액션</label>
                     <div class="space-y-3">
                         <button onclick="showResult('missing')" class="w-full text-left bg-white border border-gray-200 hover:border-brand-500 hover:shadow-md rounded-lg p-4 transition-all group flex items-start">
                             <div class="w-10 h-10 rounded bg-red-50 text-red-600 flex items-center justify-center mr-3 group-hover:bg-red-100 transition-colors shrink-0">
                                 <i class="fa-solid fa-magnifying-glass-chart text-lg"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">?앹빟泥?援?궡) ?꾩닔 ??ぉ ?꾨씫 寃異?/h3>
-                                <p class="text-xs text-gray-500 mt-1 leading-snug">洹쒖젣 媛?대뱶?쇱씤 湲곗?, 洹쒓꺽?????꾨씫???덉쭏 愿由???ぉ 諛?湲곗?移??댄깉 ?щ?瑜??뺤씤?⑸땲??</p>
+                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">식약처(국내) 필수 항목 누락 검출</h3>
+                                <p class="text-xs text-gray-500 mt-1 leading-snug">규제 가이드라인 기준, 규격서 내 누락된 품질 관리 항목 및 기준치 이탈 여부를 확인합니다.</p>
                             </div>
                         </button>
 
@@ -270,8 +270,8 @@
                                 <i class="fa-solid fa-code-compare text-lg"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">湲濡쒕쾶(ICH/FDA) 洹쒖젣 援먯감 鍮꾧탳 ?꾪솴</h3>
-                                <p class="text-xs text-gray-500 mt-1 leading-snug">MFDS, FDA, ICH 媛꾩쓽 ?곸씠??洹쒓꺽 湲곗???援먯감 鍮꾧탳?섍퀬 李⑥씠?먯쓣 ?꾩텧?⑸땲??</p>
+                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">글로벌(ICH/FDA) 규제 교차 비교 현황</h3>
+                                <p class="text-xs text-gray-500 mt-1 leading-snug">MFDS, FDA, ICH 간의 상이한 규격 기준을 교차 비교하고 차이점을 도출합니다.</p>
                             </div>
                         </button>
 
@@ -280,8 +280,8 @@
                                 <i class="fa-solid fa-stopwatch text-lg"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">寃???뚯슂?쒓컙 ?⑥텞 由ы룷??/h3>
-                                <p class="text-xs text-gray-500 mt-1 leading-snug">?꾩껜 寃???댁뿭 ?붿빟 諛??듦퀎瑜??앹꽦?섏뿬 理쒖쥌 QA/RA ?뱀씤??蹂닿퀬???뺥깭瑜??쒓났?⑸땲??</p>
+                                <h3 class="font-bold text-gray-800 group-hover:text-brand-600 transition-colors">검수 소요시간 단축 리포트</h3>
+                                <p class="text-xs text-gray-500 mt-1 leading-snug">전체 검토 내역 요약 및 통계를 생성하여 최종 QA/RA 승인용 보고서 형태를 제공합니다.</p>
                             </div>
                         </button>
                     </div>
@@ -289,177 +289,177 @@
             </div>
         </section>
 
-        <!-- ?곗륫: 寃곌낵 酉곗뼱 -->
+        <!-- 우측: 결과 뷰어 -->
         <section class="flex-1 bg-white flex flex-col h-full">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-white shadow-sm z-10">
-                <h2 class="text-xl font-bold text-navy-900" id="resultTitle">寃곌낵 酉곗뼱</h2>
+                <h2 class="text-xl font-bold text-navy-900" id="resultTitle">결과 뷰어</h2>
                 <div class="space-x-2 hidden" id="actionButtons">
                     <button id="csvDownloadBtn" onclick="downloadCSV()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i class="fa-solid fa-download mr-1"></i> CSV ?ㅼ슫濡쒕뱶
+                        <i class="fa-solid fa-download mr-1"></i> CSV 다운로드
                     </button>
                     <button id="printReportBtn" onclick="window.print()" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-500 transition-colors">
-                        <i class="fa-solid fa-print mr-1"></i> 由ы룷??異쒕젰
+                        <i class="fa-solid fa-print mr-1"></i> 리포트 출력
                     </button>
                 </div>
             </div>
             
             <div class="flex-1 p-6 overflow-y-auto bg-gray-50 relative">
-                <!-- ?湲??곹깭 ?붾㈃ -->
+                <!-- 대기 상태 화면 -->
                 <div id="idleState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-white h-full">
                     <i class="fa-solid fa-chart-pie text-7xl text-gray-300 mb-6"></i>
-                    <h3 class="text-xl font-bold text-gray-700">寃?좉? 以鍮꾨릺?덉뒿?덈떎</h3>
-                    <p class="text-gray-500 mt-2 max-w-md">醫뚯륫 硫붾돱?먯꽌 ?뚯씪???낅줈?쒗븯怨?寃???≪뀡???좏깮?섎㈃<br>?닿납???곸꽭 遺꾩꽍 寃곌낵媛 ?쒖떆?⑸땲??</p>
+                    <h3 class="text-xl font-bold text-gray-700">검토가 준비되었습니다</h3>
+                    <p class="text-gray-500 mt-2 max-w-md">좌측 메뉴에서 파일을 업로드하고 검토 액션을 선택하면<br>이곳에 상세 분석 결과가 표시됩니다.</p>
                 </div>
 
-                <!-- 遺꾩꽍 吏꾪뻾以?(濡쒕뜑) -->
+                <!-- 분석 진행중 (로더) -->
                 <div id="loadingState" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-20 h-full">
                     <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-600 mb-4"></div>
-                    <h3 class="text-lg font-bold text-navy-900">?곗씠?곕쿋?댁뒪 遺꾩꽍 以?..</h3>
-                    <p class="text-sm text-gray-500 mt-2" id="loadingText">臾몄꽌??洹쒓꺽 ?뚮씪誘명꽣瑜?異붿텧?섍퀬 ?덉뒿?덈떎.</p>
+                    <h3 class="text-lg font-bold text-navy-900">데이터베이스 분석 중...</h3>
+                    <p class="text-sm text-gray-500 mt-2" id="loadingText">문서의 규격 파라미터를 추출하고 있습니다.</p>
                 </div>
 
-                <!-- 寃곌낵: ?꾨씫 ??ぉ 寃異?-->
+                <!-- 결과: 누락 항목 검출 -->
                 <div id="resultMissing" class="hidden space-y-6 h-full">
-                    <!-- ?붿빟 移대뱶 -->
+                    <!-- 요약 카드 -->
                     <div class="grid grid-cols-3 gap-4" id="missingSummaryCards">
-                        <!-- JS ?뚮뜑留??곸뿭 -->
+                        <!-- JS 렌더링 영역 -->
                     </div>
 
-                    <!-- 寃곌낵 ?곗씠???뚯씠釉?-->
+                    <!-- 결과 데이터 테이블 -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-6">
                         <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                            <h3 class="font-bold text-navy-900">?곸꽭 寃異??댁뿭</h3>
-                            <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">議곗튂 ?꾩슂 ??ぉ ?ы븿</span>
+                            <h3 class="font-bold text-navy-900">상세 검출 내역</h3>
+                            <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">조치 필요 항목 포함</span>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left">
                                 <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
                                     <tr>
-                                        <th scope="col" class="px-6 py-3">??ぉ紐?(Parameter)</th>
-                                        <th scope="col" class="px-6 py-3">臾몄꽌 ??湲곗옱媛?/th>
-                                        <th scope="col" class="px-6 py-3">洹쒖젣 湲곗? (MFDS)</th>
-                                        <th scope="col" class="px-6 py-3">?곹깭</th>
-                                        <th scope="col" class="px-6 py-3">沅뚭퀬?ы빆</th>
+                                        <th scope="col" class="px-6 py-3">항목명 (Parameter)</th>
+                                        <th scope="col" class="px-6 py-3">문서 내 기재값</th>
+                                        <th scope="col" class="px-6 py-3">규제 기준 (MFDS)</th>
+                                        <th scope="col" class="px-6 py-3">상태</th>
+                                        <th scope="col" class="px-6 py-3">권고사항</th>
                                     </tr>
                                 </thead>
                                 <tbody id="missingTableBody">
-                                    <!-- JS ?뚮뜑留??곸뿭 -->
+                                    <!-- JS 렌더링 영역 -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- 寃곌낵: 洹쒖젣 鍮꾧탳 遺꾩꽍 (?뷀꽣?꾨씪?댁쫰湲?4? 遺꾩빞 ?? -->
+                <!-- 결과: 규제 비교 분석 (엔터프라이즈급 4대 분야 탭) -->
                 <div id="resultCompare" class="hidden h-full flex flex-col space-y-4">
                     <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col flex-1 overflow-hidden">
-                        <!-- ???ㅻ뜑 諛?寃???꾪꽣 -->
+                        <!-- 탭 헤더 및 검색/필터 -->
                         <div class="flex flex-col xl:flex-row xl:items-center justify-between px-5 pt-4 border-b border-gray-200 bg-gray-50 shrink-0 gap-3 pb-3">
                             <div class="flex space-x-1 overflow-x-auto pb-1" id="compareTabs">
-                                <button onclick="switchCompareTab('pharma')" id="tab-pharma" class="px-4 py-2 text-sm font-bold border-b-2 border-brand-600 text-brand-600 transition-colors whitespace-nowrap"><i class="fa-solid fa-capsules mr-1"></i>?섏빟??/button>
-                                <button onclick="switchCompareTab('quasi')" id="tab-quasi" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors whitespace-nowrap"><i class="fa-solid fa-notes-medical mr-1"></i>?섏빟?명뭹</button>
-                                <button onclick="switchCompareTab('cosmetic')" id="tab-cosmetic" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors whitespace-nowrap"><i class="fa-solid fa-spray-can-sparkles mr-1"></i>?붿옣??/button>
-                                <button onclick="switchCompareTab('device')" id="tab-device" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors whitespace-nowrap"><i class="fa-solid fa-stethoscope mr-1"></i>?섎즺湲곌린</button>
+                                <button onclick="switchCompareTab('pharma')" id="tab-pharma" class="px-4 py-2 text-sm font-bold border-b-2 border-brand-600 text-brand-600 transition-colors whitespace-nowrap"><i class="fa-solid fa-capsules mr-1"></i>의약품</button>
+                                <button onclick="switchCompareTab('quasi')" id="tab-quasi" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors whitespace-nowrap"><i class="fa-solid fa-notes-medical mr-1"></i>의약외품</button>
+                                <button onclick="switchCompareTab('cosmetic')" id="tab-cosmetic" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors whitespace-nowrap"><i class="fa-solid fa-spray-can-sparkles mr-1"></i>화장품</button>
+                                <button onclick="switchCompareTab('device')" id="tab-device" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-navy-900 transition-colors whitespace-nowrap"><i class="fa-solid fa-stethoscope mr-1"></i>의료기기</button>
                             </div>
                             <div class="flex items-center space-x-2 shrink-0">
                                 <div class="relative">
                                     <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
-                                    <input type="text" id="searchInput" placeholder="?깅텇紐?寃??.." class="border border-gray-300 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none w-48" oninput="applyCompareFilter()">
+                                    <input type="text" id="searchInput" placeholder="성분명 검색..." class="border border-gray-300 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none w-48" oninput="applyCompareFilter()">
                                 </div>
                                 <select id="filterDropdown" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none bg-white" onchange="applyCompareFilter()">
-                                    <option value="all">?꾩껜 ?먯젙</option>
-                                    <option value="pass">??議고솕/?듦낵</option>
-                                    <option value="fail">?좑툘 二쇱쓽/?댄깉</option>
+                                    <option value="all">전체 판정</option>
+                                    <option value="pass">✅ 조화/통과</option>
+                                    <option value="fail">⚠️ 주의/이탈</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- ???댁슜 ?곸뿭 (?ㅽ겕濡??뚯씠釉? -->
+                        <!-- 탭 내용 영역 (스크롤 테이블) -->
                         <div class="flex-1 overflow-y-auto p-0 relative transition-opacity duration-300" id="compareContentWrapper">
                             <table class="w-full text-sm text-left border-collapse">
                                 <thead class="sticky top-0 bg-navy-900 text-white z-10 shadow-sm">
                                     <tr>
-                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold w-16 text-center">?쒖쐞</th>
-                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-item-name">?덈ぉ (?깅텇/?쒗뭹)</th>
-                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold">?쒓뎅 ?앹빟泥?/th>
-                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-foreign-1">誘멸뎅 FDA</th>
-                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-foreign-2">?좊읇/ICH</th>
-                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold w-40">洹쒖젣 ?쇱튂??/th>
-                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold">?먯젙 ?붿빟</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold w-16 text-center">순위</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-item-name">품목 (성분/제품)</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold">한국 식약처</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-foreign-1">미국 FDA</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold" id="col-foreign-2">유럽/ICH</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold w-40">규제 일치율</th>
+                                        <th class="px-4 py-3 border-b border-navy-800 font-semibold">판정 요약</th>
                                     </tr>
                                 </thead>
                                 <tbody id="compareTableBody" class="divide-y divide-gray-200">
-                                    <!-- JS ?뚮뜑留??곸뿭 -->
+                                    <!-- JS 렌더링 영역 -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- 寃곌낵: 由ы룷??-->
+                <!-- 결과: 리포트 -->
                 <div id="resultReport" class="hidden space-y-6 h-full">
                     <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm mx-auto max-w-3xl">
                         <div class="border-b-2 border-navy-900 pb-4 mb-6 flex justify-between items-end">
                             <div>
-                                <h1 class="text-2xl font-bold text-navy-900 tracking-tight">?먮룞??寃??寃곌낵 蹂닿퀬??/h1>
+                                <h1 class="text-2xl font-bold text-navy-900 tracking-tight">자동화 검토 결과 보고서</h1>
                                 <p class="text-gray-500 mt-1">Generated by ReguCheck System</p>
                             </div>
                             <div class="text-right text-sm">
-                                <p><span class="font-semibold text-gray-700">?묒꽦?쇱떆:</span> <span id="reportDate"></span></p>
-                                <p><span class="font-semibold text-gray-700">??곷Ц??</span> <span id="reportDocName"></span></p>
+                                <p><span class="font-semibold text-gray-700">작성일시:</span> <span id="reportDate"></span></p>
+                                <p><span class="font-semibold text-gray-700">대상문서:</span> <span id="reportDocName"></span></p>
                             </div>
                         </div>
 
-                        <!-- ROI 諭껋? -->
+                        <!-- ROI 뱃지 -->
                         <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-xl font-bold text-navy-900 border-b border-gray-200 pb-2"><i class="fa-solid fa-file-signature text-brand-600 mr-2"></i>QA/RA ?덉쭏 ?됯? (eCTD 湲곗?)</h3>
+                            <h3 class="text-xl font-bold text-navy-900 border-b border-gray-200 pb-2"><i class="fa-solid fa-file-signature text-brand-600 mr-2"></i>QA/RA 품질 평가 (eCTD 기준)</h3>
                             <div class="bg-green-50 border border-green-200 px-3 py-1.5 rounded-full flex items-center shadow-sm">
                                 <i class="fa-solid fa-bolt text-yellow-500 mr-1.5"></i>
-                                <span class="text-xs font-bold text-green-700">寃???뚯슂?쒓컙 ?⑥텞 ?꾨즺</span>
+                                <span class="text-xs font-bold text-green-700">검토 소요시간 단축 완료</span>
                             </div>
                         </div>
 
-                        <!-- 1. 醫낇빀 ?먯젙 ?붿빟 -->
+                        <!-- 1. 종합 판정 요약 -->
                         <div class="grid grid-cols-2 gap-4 mb-6">
                             <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-500 font-medium">?듦낵 (Pass)</p>
+                                    <p class="text-sm text-gray-500 font-medium">통과 (Pass)</p>
                                     <p class="text-3xl font-bold text-green-600 mt-1" id="reportPassCount">0</p>
                                 </div>
                                 <i class="fa-solid fa-check-circle text-4xl text-green-100"></i>
                             </div>
                             <div class="bg-red-50 rounded-xl p-5 border border-red-100 flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-500 font-medium">洹쒓꺽 ?댄깉 (OOS/OOT)</p>
+                                    <p class="text-sm text-gray-500 font-medium">규격 이탈 (OOS/OOT)</p>
                                     <p class="text-3xl font-bold text-red-600 mt-1" id="reportFailCount">0</p>
                                 </div>
                                 <i class="fa-solid fa-triangle-exclamation text-4xl text-red-100"></i>
                             </div>
                         </div>
 
-                        <!-- 2. ?먮즺 ?깅텇蹂?洹쒓꺽 以???꾪솴 -->
+                        <!-- 2. 원료 성분별 규격 준수 현황 -->
                         <div class="mb-6">
-                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-table-list text-gray-400 mr-1.5"></i>?먮즺 ?깅텇蹂?洹쒓꺽 以???꾪솴</h4>
+                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-table-list text-gray-400 mr-1.5"></i>원료 성분별 규격 준수 현황</h4>
                             <div class="overflow-hidden border border-gray-200 rounded-lg">
                                 <table class="w-full text-sm text-left">
                                     <thead class="bg-gray-50 text-gray-500 uppercase border-b border-gray-200">
                                         <tr>
-                                            <th class="px-4 py-2 font-semibold">寃????ぉ</th>
-                                            <th class="px-4 py-2 font-semibold">湲곗옱媛?/th>
-                                            <th class="px-4 py-2 font-semibold">?붽뎄 湲곗?</th>
-                                            <th class="px-4 py-2 font-semibold text-center">?먯젙</th>
+                                            <th class="px-4 py-2 font-semibold">검토 항목</th>
+                                            <th class="px-4 py-2 font-semibold">기재값</th>
+                                            <th class="px-4 py-2 font-semibold">요구 기준</th>
+                                            <th class="px-4 py-2 font-semibold text-center">판정</th>
                                         </tr>
                                     </thead>
                                     <tbody id="reportTableBody" class="divide-y divide-gray-100">
-                                        <!-- JS ?숈쟻 ?뚮뜑留?-->
+                                        <!-- JS 동적 렌더링 -->
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <!-- 3. 寃곌낵 ?쒓컖??(Chart.js) -->
+                        <!-- 3. 결과 시각화 (Chart.js) -->
                         <div class="mb-6" style="page-break-inside: avoid;">
-                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-chart-column text-gray-400 mr-1.5"></i>寃????ぉ蹂?洹쒓꺽 vs ?ㅼ젣 ?섏튂 鍮꾧탳</h4>
+                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-chart-column text-gray-400 mr-1.5"></i>검토 항목별 규격 vs 실제 수치 비교</h4>
                             <div class="bg-white rounded-lg p-5 border border-gray-200">
                                 <div class="relative w-full h-64">
                                     <canvas id="resultChart"></canvas>
@@ -467,12 +467,12 @@
                             </div>
                         </div>
 
-                        <!-- 4. QA/RA 議곗튂 沅뚭퀬?ы빆 -->
+                        <!-- 4. QA/RA 조치 권고사항 -->
                         <div class="mb-6">
-                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-clipboard-list text-gray-400 mr-1.5"></i>QA/RA 議곗튂 沅뚭퀬?ы빆</h4>
+                            <h4 class="font-bold text-navy-900 mb-3 text-sm"><i class="fa-solid fa-clipboard-list text-gray-400 mr-1.5"></i>QA/RA 조치 권고사항</h4>
                             <div class="bg-gray-50 rounded-lg p-5 border border-gray-200">
                                 <ul class="space-y-3" id="actionItemsList">
-                                    <!-- JS ?숈쟻 ?뚮뜑留??곸뿭 -->
+                                    <!-- JS 동적 렌더링 영역 -->
                                 </ul>
                             </div>
                         </div>
@@ -484,38 +484,39 @@
     </main>
 
     <script>
-        // ?꾩뿭 ?곹깭 愿由?        let isApiSpecUploaded = false;
+        // 전역 상태 관리
+        let isApiSpecUploaded = false;
         let isLocalDbUploaded = false;
-        let currentApiFileName = "?좏깮??臾몄꽌 ?놁쓬";
+        let currentApiFileName = "선택된 문서 없음";
         
         let currentAnalysisData = [];
         let evaluatedGlobalData = [];
-        let myChart = null; // Chart.js ?몄뒪?댁뒪 ??μ슜
+        let myChart = null; // Chart.js 인스턴스 저장용
 
-        // 媛??CSV ?곗씠???좎뼵 (濡쒖뺄 ?대뜑??
+        // 가상 CSV 데이터 선언 (로컬 폴더용)
         const mockCsvData = [
-            "?앹빟泥?洹쒓꺽.csv",
-            "ICH_媛?대뱶?쇱씤.csv",
-            "FDA_洹쒖젣.csv"
+            "식약처_규격.csv",
+            "ICH_가이드라인.csv",
+            "FDA_규제.csv"
         ];
 
-        // 湲곕낯 ?섑뵆 ?곗씠??(CSV ?낅줈???ㅽ뙣 ???먮뒗 CSV媛 ?꾨땶 ?뚯씪 ?낅줈?????ъ슜)
+        // 기본 샘플 데이터 (CSV 업로드 실패 시 또는 CSV가 아닌 파일 업로드 시 사용)
         function getFallbackData() {
             return [
-                { param: '?붾쪟?⑸ℓ', docValue: '0.05%', mfdsLimit: '0.1% ?댄븯', actualValue: 0.05, mfdsValue: 0.1, isMinLimit: false },
-                { param: '?좎뿰臾쇱쭏', docValue: '0.12%', mfdsLimit: '0.1% ?댄븯', actualValue: 0.12, mfdsValue: 0.1, isMinLimit: false },
-                { param: '嫄댁“媛먮웾', docValue: '0.4%', mfdsLimit: '0.5% ?댄븯', actualValue: 0.4, mfdsValue: 0.5, isMinLimit: false },
-                { param: '?깆긽', docValue: '諛깆깋 媛猷?, mfdsLimit: '諛깆깋 媛猷?, actualValue: null, mfdsValue: null, isMinLimit: false },
-                { param: '?쒕룄', docValue: '98.5%', mfdsLimit: '99.0% ?댁긽', actualValue: 98.5, mfdsValue: 99.0, isMinLimit: true },
-                { param: '以묎툑??, docValue: '15ppm', mfdsLimit: '20ppm ?댄븯', actualValue: 15, mfdsValue: 20, isMinLimit: false }
+                { param: '잔류용매', docValue: '0.05%', mfdsLimit: '0.1% 이하', actualValue: 0.05, mfdsValue: 0.1, isMinLimit: false },
+                { param: '유연물질', docValue: '0.12%', mfdsLimit: '0.1% 이하', actualValue: 0.12, mfdsValue: 0.1, isMinLimit: false },
+                { param: '건조감량', docValue: '0.4%', mfdsLimit: '0.5% 이하', actualValue: 0.4, mfdsValue: 0.5, isMinLimit: false },
+                { param: '성상', docValue: '백색 가루', mfdsLimit: '백색 가루', actualValue: null, mfdsValue: null, isMinLimit: false },
+                { param: '순도', docValue: '98.5%', mfdsLimit: '99.0% 이상', actualValue: 98.5, mfdsValue: 99.0, isMinLimit: true },
+                { param: '중금속', docValue: '15ppm', mfdsLimit: '20ppm 이하', actualValue: 15, mfdsValue: 20, isMinLimit: false }
             ];
         }
 
-        // CSV 臾몄옄???뚯떛 (?ㅼ젣 ?뚯씪 ?곗씠??泥섎━??
+        // CSV 문자열 파싱 (실제 파일 데이터 처리용)
         function parseCSV(csvText) {
             try {
                 const lines = csvText.split('\\n').map(l => l.trim()).filter(l => l !== '');
-                if (lines.length < 2) throw new Error("?곗씠?곌? 遺議깊빀?덈떎 (?ㅻ뜑 ?ы븿 理쒖냼 2以??꾩슂).");
+                if (lines.length < 2) throw new Error("데이터가 부족합니다 (헤더 포함 최소 2줄 필요).");
                 
                 const data = [];
                 for (let i = 1; i < lines.length; i++) {
@@ -525,14 +526,14 @@
                         const docValue = cols[1];
                         const mfdsLimit = cols[2];
                         
-                        // ?섏튂 ?곗씠??異붿텧 (?뺢퇋???댁슜)
+                        // 수치 데이터 추출 (정규식 이용)
                         const actualValMatch = docValue.match(/[0-9.]+/);
                         const mfdsValMatch = mfdsLimit.match(/[0-9.]+/);
                         
                         const actualValue = actualValMatch ? parseFloat(actualValMatch[0]) : null;
                         const mfdsValue = mfdsValMatch ? parseFloat(mfdsValMatch[0]) : null;
                         
-                        const isMinLimit = mfdsLimit.includes('?댁긽');
+                        const isMinLimit = mfdsLimit.includes('이상');
 
                         data.push({
                             param,
@@ -550,7 +551,7 @@
             }
         }
 
-        // ?щ궡 湲곗? 諛??앹빟泥?湲곗? ?숈떆 ?됯? 濡쒖쭅
+        // 사내 기준 및 식약처 기준 동시 평가 로직
         function evaluateData(dataArray) {
             const internalInput = document.getElementById('internalSpecInput').value;
             const internalSpecValue = internalInput !== "" ? parseFloat(internalInput) : null;
@@ -559,7 +560,7 @@
                 let mfdsPass = true;
                 let internalPass = true;
                 
-                // ?앹빟泥?湲곗? ?됯?
+                // 식약처 기준 평가
                 if (item.actualValue !== null && item.mfdsValue !== null) {
                     if (item.isMinLimit) {
                         if (item.actualValue < item.mfdsValue) mfdsPass = false;
@@ -568,7 +569,7 @@
                     }
                 }
 
-                // ?щ궡 湲곗? ?됯? (?쇰컲?곸쑝濡??щ궡 湲곗?? 理쒕? ?덉슜移섎씪怨?媛?? 理쒖냼移??붽굔??寃쎌슦 ?щ궡湲곗??????꾧꺽??理쒖냼移섎씪怨?泥섎━)
+                // 사내 기준 평가 (일반적으로 사내 기준은 최대 허용치라고 가정. 최소치 요건일 경우 사내기준이 더 엄격한 최소치라고 처리)
                 if (internalSpecValue !== null && item.actualValue !== null && !item.isMinLimit) {
                     if (item.actualValue > internalSpecValue) {
                         internalPass = false;
@@ -579,39 +580,39 @@
                     }
                 }
 
-                let statusText = "?곹빀";
+                let statusText = "적합";
                 let isFail = false;
                 let action = "-";
 
-                // ?됯? 媛?ν븳 ?섏튂 ?곗씠?곗씤 寃쎌슦
+                // 평가 가능한 수치 데이터인 경우
                 if (item.actualValue !== null && item.mfdsValue !== null) {
                     if (!mfdsPass && !internalPass) {
-                        statusText = "?앹빟泥??щ궡 湲곗? ?숈떆 ?댄깉";
+                        statusText = "식약처/사내 기준 동시 이탈";
                         isFail = true;
-                        action = "MFDS 諛??щ궡 愿由?湲곗???紐⑤몢 珥덇낵?? 利됯컖?곸씤 ?쒗뭹 ?먯씤 議곗궗 ?붾쭩.";
+                        action = "MFDS 및 사내 관리 기준을 모두 초과함. 즉각적인 제품 원인 조사 요망.";
                     } else if (!mfdsPass) {
-                        statusText = "?앹빟泥?湲곗? ?댄깉 (OOS)";
+                        statusText = "식약처 기준 이탈 (OOS)";
                         isFail = true;
-                        action = "?앹빟泥?洹쒖젣 湲곗? ?꾨컲. ?쒖“?ъ뿉 怨듭젙 媛쒖꽑 ?붿껌 諛??ъ떆??";
+                        action = "식약처 규제 기준 위반. 제조사에 공정 개선 요청 및 재시험.";
                     } else if (!internalPass) {
-                        statusText = "?щ궡 湲곗? ?댄깉 (OOT)";
+                        statusText = "사내 기준 이탈 (OOT)";
                         isFail = true;
-                        action = "?щ궡 ?덉쭏 愿由?湲곗?(Internal Spec)??踰쀬뼱?? 寃쏀뼢???뚯븙 ?붾쭩.";
+                        action = "사내 품질 관리 기준(Internal Spec)을 벗어남. 경향성 파악 요망.";
                     } else {
-                        statusText = "?곹빀";
+                        statusText = "적합";
                         isFail = false;
-                        action = "?앹빟泥?諛??щ궡 湲곗? 紐⑤몢 留뚯”.";
+                        action = "식약처 및 사내 기준 모두 만족.";
                     }
                 } else {
-                    // ?섏튂 ?곗씠?곌? ?녿뒗 ?띿뒪????ぉ??寃쎌슦
-                    if (item.docValue.includes("湲곗옱 ?덈맖") || item.docValue.includes("?꾨씫")) {
-                        statusText = "??ぉ ?꾨씫";
+                    // 수치 데이터가 없는 텍스트 항목인 경우
+                    if (item.docValue.includes("기재 안됨") || item.docValue.includes("누락")) {
+                        statusText = "항목 누락";
                         isFail = true;
-                        action = "?대떦 ??ぉ???꾨씫?섏뿀?듬땲?? ?먮낯 ?쒗뿕?깆쟻??CoA) ?뺤씤 ?붾쭩.";
+                        action = "해당 항목이 누락되었습니다. 원본 시험성적서(CoA) 확인 요망.";
                     } else {
-                        statusText = "?곹빀 (?띿뒪??寃??";
+                        statusText = "적합 (텍스트 검토)";
                         isFail = false;
-                        action = "臾몄꽌???댁긽 ?놁쓬.";
+                        action = "문서상 이상 없음.";
                     }
                 }
 
@@ -626,53 +627,53 @@
             });
         }
 
-        // 湲濡쒕쾶 鍮꾧탳 遺꾩꽍 Mock ?곗씠??(?뷀꽣?꾨씪?댁쫰湲?4? 遺꾩빞 遺꾨━)
+        // 글로벌 비교 분석 Mock 데이터 (엔터프라이즈급 4대 분야 분리)
         const mockCompareDataObj = {
             pharma: {
-                foreign1Title: "誘멸뎅 FDA",
-                foreign2Title: "?좊읇 (EMA/ICH)",
-                itemColTitle: "?덈ぉ (二쇱꽦遺?API)",
+                foreign1Title: "미국 FDA",
+                foreign2Title: "유럽 (EMA/ICH)",
+                itemColTitle: "품목 (주성분/API)",
                 data: [
-                    { rank: 1, name: "?꾨ぉ?쒖떎由?(Amoxicillin)", mfds: "?좎뿰臾쇱쭏 1.0% ?댄븯", fda: "USP 湲곗? 1.0% ?댄븯", eu: "Ph.Eur 湲곗? 1.0% ?댄븯", matchRate: 100, judge: "??3援?湲곗? ?꾨꼍 議고솕" },
-                    { rank: 2, name: "?대??꾨줈??(Ibuprofen)", mfds: "?붾쪟?⑸ℓ Hexane 290ppm", fda: "ICH Q3C 以??(290ppm)", eu: "ICH Q3C 以??(290ppm)", matchRate: 100, judge: "??湲곗? 異⑹”" },
-                    { rank: 3, name: "?꾩꽭?몄븘誘몃끂??(Acetaminophen)", mfds: "以묎툑??20ppm ?댄븯(鍮꾩깋踰?", fda: "USP <232> ?먯냼遺덉닚臾?, eu: "ICH Q3D ?먯냼遺덉닚臾??곸슜", matchRate: 65, judge: "?좑툘 ?섏텧 ??ICH Q3D 湲곕컲 遺꾩꽍??異붽? ?꾩슂" },
-                    { rank: 4, name: "濡쒖궗瑜댄깂 移쇰ⅷ (Losartan K)", mfds: "?꾩???遺덉닚臾?湲곗? ?ㅼ젙", fda: "NDSRIs ?덊듃濡쒖궗誘?愿由?, eu: "EMA ?덊듃濡쒖궗誘?愿由?媛뺥솕", matchRate: 75, judge: "?좑툘 ?덊듃濡쒖궗誘쇰쪟 諛쒖깮 媛?μ꽦 ?됯? ?꾩닔" }
+                    { rank: 1, name: "아목시실린 (Amoxicillin)", mfds: "유연물질 1.0% 이하", fda: "USP 기준 1.0% 이하", eu: "Ph.Eur 기준 1.0% 이하", matchRate: 100, judge: "✅ 3국 기준 완벽 조화" },
+                    { rank: 2, name: "이부프로펜 (Ibuprofen)", mfds: "잔류용매 Hexane 290ppm", fda: "ICH Q3C 준용 (290ppm)", eu: "ICH Q3C 준용 (290ppm)", matchRate: 100, judge: "✅ 기준 충족" },
+                    { rank: 3, name: "아세트아미노펜 (Acetaminophen)", mfds: "중금속 20ppm 이하(비색법)", fda: "USP <232> 원소불순물", eu: "ICH Q3D 원소불순물 적용", matchRate: 65, judge: "⚠️ 수출 시 ICH Q3D 기반 분석표 추가 필요" },
+                    { rank: 4, name: "로사르탄 칼륨 (Losartan K)", mfds: "아지드 불순물 기준 설정", fda: "NDSRIs 니트로사민 관리", eu: "EMA 니트로사민 관리 강화", matchRate: 75, judge: "⚠️ 니트로사민류 발생 가능성 평가 필수" }
                 ]
             },
             quasi: {
-                foreign1Title: "誘멸뎅 FDA (OTC)",
-                foreign2Title: "?좊읇 (EU Cosmetics/Biocides)",
-                itemColTitle: "?덈ぉ (?섏빟?명뭹)",
+                foreign1Title: "미국 FDA (OTC)",
+                foreign2Title: "유럽 (EU Cosmetics/Biocides)",
+                itemColTitle: "품목 (의약외품)",
                 data: [
-                    { rank: 1, name: "遺덉냼 諛고빀 移섏빟", mfds: "遺덉냼 1,500ppm ?댄븯", fda: "Fluoride monograph", eu: "1,500ppm ?댄븯 (Cosmetic)", matchRate: 90, judge: "???쇰컲??湲곗? 遺?? },
-                    { rank: 2, name: "蹂닿굔??留덉뒪??(KF94)", mfds: "遺꾩쭊?ъ쭛?⑥쑉 94% ?댁긽", fda: "N95 (NIOSH 湲곗? 95%)", eu: "FFP2 (EN 149 湲곗? 94%)", matchRate: 80, judge: "?좑툘 FDA 吏꾩텧 ??N95 洹쒓꺽 ?쒗뿕 蹂꾨룄 ?꾩슂" },
-                    { rank: 3, name: "?먯냼?낆젣 (Ethanol)", mfds: "?먰깂??54.7~70v/v%", fda: "FDA OTC (60~95%)", eu: "Biocidal Products Regulation", matchRate: 85, judge: "??OTC Monograph ?붽굔 異⑹”" }
+                    { rank: 1, name: "불소 배합 치약", mfds: "불소 1,500ppm 이하", fda: "Fluoride monograph", eu: "1,500ppm 이하 (Cosmetic)", matchRate: 90, judge: "✅ 일반적 기준 부합" },
+                    { rank: 2, name: "보건용 마스크 (KF94)", mfds: "분진포집효율 94% 이상", fda: "N95 (NIOSH 기준 95%)", eu: "FFP2 (EN 149 기준 94%)", matchRate: 80, judge: "⚠️ FDA 진출 시 N95 규격 시험 별도 필요" },
+                    { rank: 3, name: "손소독제 (Ethanol)", mfds: "에탄올 54.7~70v/v%", fda: "FDA OTC (60~95%)", eu: "Biocidal Products Regulation", matchRate: 85, judge: "✅ OTC Monograph 요건 충족" }
                 ]
             },
             cosmetic: {
-                foreign1Title: "誘멸뎅 FDA (MoCRA)",
-                foreign2Title: "?좊읇 (CPNP)",
-                itemColTitle: "?덈ぉ (?붿옣???깅텇)",
+                foreign1Title: "미국 FDA (MoCRA)",
+                foreign2Title: "유럽 (CPNP)",
+                itemColTitle: "품목 (화장품 성분)",
                 data: [
-                    { rank: 1, name: "吏뺥겕?μ궗?대뱶 (Zinc Oxide)", mfds: "諛고빀?쒕룄 25% ?댄븯", fda: "諛고빀?쒕룄 25% ?댄븯 (OTC)", eu: "25% ?댄븯 (?섎끂 ?낆옄 洹쒖젣 ?덉쓬)", matchRate: 80, judge: "?좑툘 ?좊읇 ?섏텧 ???섎끂臾쇱쭏 利앸챸 異붽? ?꾩슂" },
-                    { rank: 2, name: "?고??꾨뵒?μ궗?대뱶", mfds: "25% ?댄븯", fda: "25% ?댄븯", eu: "?≪엯 ?곕젮 ?쒗뭹???섎끂 ?ъ슜 ?쒗븳", matchRate: 75, judge: "?좑툘 ?먯뼱濡쒖「/?ㅽ봽?덉씠瑜?EU 諛고빀 二쇱쓽" },
-                    { rank: 3, name: "?섏씠?꾩떊?꾨쭏?대뱶", mfds: "誘몃갚 湲곕뒫??怨좎떆 (2~5%)", fda: "?쒗븳 ?놁쓬 (湲곕뒫???쒕갑 ??寃??", eu: "?쒗븳 ?놁쓬", matchRate: 90, judge: "???덉쟾???먮즺留뚯쑝濡?吏꾩텧 媛?? },
-                    { rank: 4, name: "?섎끃?쒖뿉?꾩삱", mfds: "諛고빀?쒕룄 1.0%", fda: "1.0% ?댄븯 沅뚯옣", eu: "諛고빀?쒕룄 1.0%", matchRate: 100, judge: "??湲濡쒕쾶 諛고빀?쒕룄 ?쇱튂" }
+                    { rank: 1, name: "징크옥사이드 (Zinc Oxide)", mfds: "배합한도 25% 이하", fda: "배합한도 25% 이하 (OTC)", eu: "25% 이하 (나노 입자 규제 있음)", matchRate: 80, judge: "⚠️ 유럽 수출 시 나노물질 증명 추가 필요" },
+                    { rank: 2, name: "티타늄디옥사이드", mfds: "25% 이하", fda: "25% 이하", eu: "흡입 우려 제품에 나노 사용 제한", matchRate: 75, judge: "⚠️ 에어로졸/스프레이류 EU 배합 주의" },
+                    { rank: 3, name: "나이아신아마이드", mfds: "미백 기능성 고시 (2~5%)", fda: "제한 없음 (기능성 표방 시 검토)", eu: "제한 없음", matchRate: 90, judge: "✅ 안전성 자료만으로 진출 가능" },
+                    { rank: 4, name: "페녹시에탄올", mfds: "배합한도 1.0%", fda: "1.0% 이하 권장", eu: "배합한도 1.0%", matchRate: 100, judge: "✅ 글로벌 배합한도 일치" }
                 ]
             },
             device: {
-                foreign1Title: "誘멸뎅 FDA (510k/PMA)",
-                foreign2Title: "?좊읇 (CE MDR)",
-                itemColTitle: "?덈ぉ (?섎즺湲곌린 遺꾨쪟)",
+                foreign1Title: "미국 FDA (510k/PMA)",
+                foreign2Title: "유럽 (CE MDR)",
+                itemColTitle: "품목 (의료기기 분류)",
                 data: [
-                    { rank: 1, name: "?붿????덉븬怨?, mfds: "2?깃툒 (?몄쬆)", fda: "Class II (510k)", eu: "Class IIa (MDR ?몄쬆)", matchRate: 85, judge: "???깅뒫 ?쒗뿕 洹쒓꺽(IEC 80601) 怨듯넻 ?곸슜" },
-                    { rank: 2, name: "?뚰봽??肄섑깮?몃젋利?, mfds: "3?깃툒 / 4?깃툒", fda: "Class II / III", eu: "Class IIb", matchRate: 70, judge: "?좑툘 ?깃툒 遺꾨쪟 ?곸씠. ?꾩긽 ?됯?(CER) 媛뺥솕 ?鍮? },
-                    { rank: 3, name: "AI ?곸긽吏꾨떒 S/W", mfds: "2~3?깃툒 (?앹빟泥??곸떊)", fda: "SaMD (Class II/De Novo)", eu: "Class IIa/IIb (MDR Rule 11)", matchRate: 60, judge: "?좑툘 FDA De Novo 諛?CE MDR Rule 11 ???꾧꺽???꾩긽 洹쇨굅 ?붾쭩" }
+                    { rank: 1, name: "디지털 혈압계", mfds: "2등급 (인증)", fda: "Class II (510k)", eu: "Class IIa (MDR 인증)", matchRate: 85, judge: "✅ 성능 시험 규격(IEC 80601) 공통 적용" },
+                    { rank: 2, name: "소프트 콘택트렌즈", mfds: "3등급 / 4등급", fda: "Class II / III", eu: "Class IIb", matchRate: 70, judge: "⚠️ 등급 분류 상이. 임상 평가(CER) 강화 대비" },
+                    { rank: 3, name: "AI 영상진단 S/W", mfds: "2~3등급 (식약처 혁신)", fda: "SaMD (Class II/De Novo)", eu: "Class IIa/IIb (MDR Rule 11)", matchRate: 60, judge: "⚠️ FDA De Novo 및 CE MDR Rule 11 등 엄격한 임상 근거 요망" }
                 ]
             }
         };
 
-        // 媛?移댄뀒怨좊━蹂꾨줈 30媛??덈ぉ???숈쟻?쇰줈 ?앹꽦 (?곸쐞 ?섑뵆??湲곕컲?쇰줈 ?뺤옣)
+        // 각 카테고리별로 30개 품목을 동적으로 생성 (상위 샘플을 기반으로 확장)
         function generateFullMockData() {
             const categories = ['pharma', 'quasi', 'cosmetic', 'device'];
             
@@ -684,11 +685,11 @@
                     const tpl = baseData[i % currentLen];
                     const matchRate = Math.floor(Math.random() * 41) + 60; 
                     
-                    let judgeStr = "??湲濡쒕쾶 洹쒓꺽 ?꾨꼍 議고솕";
-                    if(matchRate < 75) judgeStr = "?좑툘 援??蹂?洹쒖젣 ?붽굔 ??李⑥씠. ?곸꽭 遺꾩꽍 ?붾쭩";
-                    else if(matchRate < 90) judgeStr = "?좑툘 ?쇰? 湲곗? 遺덉씪移?(?쒗뿕?깆쟻??異붽? ?붾쭩)";
+                    let judgeStr = "✅ 글로벌 규격 완벽 조화";
+                    if(matchRate < 75) judgeStr = "⚠️ 국가별 규제 요건 큰 차이. 상세 분석 요망";
+                    else if(matchRate < 90) judgeStr = "⚠️ 일부 기준 불일치 (시험성적서 추가 요망)";
 
-                    const newName = `${tpl.name.split('(')[0].trim()} ?뚯깮??${String.fromCharCode(65 + (i % 5))}-${i}`;
+                    const newName = `${tpl.name.split('(')[0].trim()} 파생형 ${String.fromCharCode(65 + (i % 5))}-${i}`;
 
                     baseData.push({
                         rank: i,
@@ -706,7 +707,7 @@
 
         let currentCompareTab = 'pharma';
 
-        // 1. ?뚯씪 ?낅줈??泥섎━ (?먮즺 洹쒓꺽?? 諛??ㅼ젣 CSV ?뚯떛 ?곕룞
+        // 1. 파일 업로드 처리 (원료 규격서) 및 실제 CSV 파싱 연동
         function updateUploadStatus(input) {
             if (input.files && input.files.length > 0) {
                 const file = input.files[0];
@@ -722,526 +723,11 @@
                 fileListContainer.classList.remove('hidden');
                 fileIcon.classList.add('hidden');
                 fileLoader.classList.remove('hidden');
-                statusText.textContent = "?뚯씪 遺꾩꽍 以?..";
+                statusText.textContent = "파일 분석 중...";
                 statusText.classList.remove('text-green-500', 'font-semibold');
                 statusText.classList.add('text-gray-500');
-                removeBtn.classList.add('hidden'); // 濡쒕뵫 以묒뿉????젣 遺덇? 泥섎━
+                removeBtn.classList.add('hidden'); // 로딩 중에는 삭제 불가 처리
 
-                // ?붾㈃ 珥덇린??                resetView();
-
-                // ?뺤옣?먯뿉 ?곕Ⅸ ?뚯떛 濡쒖쭅 ?곸슜
-                if (file.name.toLowerCase().endsWith('.csv')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        try {
-                            const text = e.target.result;
-                            currentAnalysisData = parseCSV(text);
-                            if(currentAnalysisData.length === 0) throw new Error("?뚯떛???곗씠????ぉ???놁뒿?덈떎.");
-                            finalizeUploadUI();
-                        } catch (error) {
-                            alert("CSV ?뚯씪???뚯떛?섎뒗 以??먮윭媛 諛쒖깮?덉뒿?덈떎:\n" + error.message + "\n湲곕낯 ?섑뵆 ?곗씠?곕줈 ?泥댄븯??吏꾪뻾?⑸땲??");
-                            currentAnalysisData = getFallbackData();
-                            finalizeUploadUI();
-                        }
-                    };
-                    reader.onerror = function() {
-                        alert("?뚯씪???쎌쓣 ???놁뒿?덈떎. 湲곕낯 ?섑뵆 ?곗씠?곕줈 ?泥댄븯??吏꾪뻾?⑸땲??");
-                        currentAnalysisData = getFallbackData();
-                        finalizeUploadUI();
-                    };
-                    reader.readAsText(file);
-                } else {
-                    // CSV媛 ?꾨땶 湲고? ?뚯씪??寃쎌슦 (媛???곗씠???곸슜)
-                    setTimeout(() => {
-                        currentAnalysisData = getFallbackData();
-                        finalizeUploadUI();
-                    }, 800);
-                }
-
-                function finalizeUploadUI() {
-                    setTimeout(() => {
-                        fileLoader.classList.add('hidden');
-                        fileIcon.classList.remove('hidden');
-                        statusText.textContent = "???뚯씪 ?몄떇 諛??곗씠??異붿텧 ?꾨즺";
-                        statusText.classList.remove('text-gray-500');
-                        statusText.classList.add('text-green-500', 'font-semibold');
-                        removeBtn.classList.remove('hidden');
-                        
-                        isApiSpecUploaded = true;
-                    }, 500);
-                }
-            }
-        }
-
-        // 2. 濡쒖뺄 ?대뜑 ?곕룞 泥섎━
-        function updateLocalFolderStatus(input) {
-            if (input.files && input.files.length > 0) {
-                document.getElementById('localFolderPrompt').classList.add('hidden');
-                const resultDiv = document.getElementById('localFolderResult');
-                const listUl = document.getElementById('mockCsvList');
-                
-                listUl.innerHTML = '';
-                
-                const files = Array.from(input.files);
-                const displayFiles = files.slice(0, 5);
-                
-                displayFiles.forEach(file => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span class="text-green-400 font-bold mr-1">??/span> ${file.name}`;
-                    listUl.appendChild(li);
-                });
-                
-                if (files.length > 5) {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span class="text-gray-400 italic text-xs ml-4">+ ??${files.length - 5}嫄????덉쓬</span>`;
-                    listUl.appendChild(li);
-                }
-                
-                resultDiv.classList.remove('hidden');
-                isLocalDbUploaded = true;
+                // 화면 초기화
                 resetView();
-            }
-        }
 
-        function removeFile() {
-            document.getElementById('fileUpload').value = '';
-            document.getElementById('uploadedFileList').classList.add('hidden');
-            document.getElementById('uploadFileStatusText').textContent = "?湲?以?;
-            document.getElementById('uploadFileStatusText').classList.remove('text-green-500', 'font-semibold');
-            document.getElementById('uploadFileStatusText').classList.add('text-gray-500');
-            
-            isApiSpecUploaded = false;
-            currentApiFileName = "?좏깮??臾몄꽌 ?놁쓬";
-            currentAnalysisData = [];
-            resetView();
-        }
-
-        function resetView() {
-            document.getElementById('idleState').classList.remove('hidden');
-            document.getElementById('resultMissing').classList.add('hidden');
-            document.getElementById('resultCompare').classList.add('hidden');
-            document.getElementById('resultReport').classList.add('hidden');
-            document.getElementById('actionButtons').classList.add('hidden');
-        }
-
-        // 怨듯넻 ?ㅼ슫濡쒕뱶 ?⑥닔 (CSV)
-        function downloadCSV() {
-            if(!isApiSpecUploaded && !isLocalDbUploaded) {
-                alert("寃곌낵媛 ?앹꽦?섏? ?딆븯?듬땲??");
-                return;
-            }
-            
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // ?쒓? 源⑥쭚 諛⑹? BOM 異붽?
-            csvContent += "??ぉ紐?臾몄꽌 ??湲곗옱媛?洹쒖젣 湲곗?,?곹깭,沅뚭퀬?ы빆\r\n";
-            
-            evaluatedGlobalData.forEach(item => {
-                csvContent += `"${item.param}","${item.docValue}","${item.mfdsLimit}","${item.statusText}","${item.action}"\r\n`;
-            });
-            
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "寃곌낵蹂닿퀬??csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // 3. ?꾨씫 ?곗씠??(Missing) ?뚮뜑留?        function renderMissingData() {
-            // 寃????濡쒖쭅 ?곸슜
-            evaluatedGlobalData = evaluateData(currentAnalysisData);
-
-            const tbody = document.getElementById('missingTableBody');
-            tbody.innerHTML = '';
-            
-            let missingCount = 0;
-            let passCount = 0;
-
-            evaluatedGlobalData.forEach(item => {
-                if (item.isFail) missingCount++;
-                else passCount++;
-
-                const rowBg = item.isFail ? 'bg-red-50 border-b border-red-100' : 'bg-white border-b border-gray-100 opacity-80';
-                
-                let badgeClass = item.isFail ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
-                const statusBadge = `<span class="${badgeClass} text-xs font-semibold px-2 py-1 rounded">${item.statusText}</span>`;
-
-                tbody.innerHTML += `
-                    <tr class="${rowBg}">
-                        <td class="px-6 py-4 font-medium text-gray-900">${item.param}</td>
-                        <td class="px-6 py-4 ${item.isFail ? 'text-red-600 font-bold' : ''}">${item.docValue}</td>
-                        <td class="px-6 py-4">${item.mfdsLimit}</td>
-                        <td class="px-6 py-4">${statusBadge}</td>
-                        <td class="px-6 py-4 text-xs text-gray-600">${item.action}</td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById('missingSummaryCards').innerHTML = `
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-red-500">
-                    <p class="text-sm text-gray-500 font-medium">寃異쒕맂 洹쒓꺽 ?댄깉/?꾨씫</p>
-                    <p class="text-2xl font-bold text-red-600 mt-1">${missingCount}<span class="text-sm text-gray-500 font-normal ml-1">嫄?/span></p>
-                </div>
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-green-500">
-                    <p class="text-sm text-gray-500 font-medium">?뺤긽 ?듦낵 ??ぉ</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">${passCount}<span class="text-sm text-gray-500 font-normal ml-1">嫄?/span></p>
-                </div>
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-blue-500">
-                    <p class="text-sm text-gray-500 font-medium">珥?寃????ぉ</p>
-                    <p class="text-2xl font-bold text-navy-900 mt-1">${evaluatedGlobalData.length}<span class="text-sm text-gray-500 font-normal ml-1">嫄?/span></p>
-                </div>
-            `;
-        }
-
-        // 4. 鍮꾧탳 ?곗씠???뚮뜑留?諛?湲濡쒕쾶 寃???꾪꽣
-        function applyCompareFilter() {
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            const filterState = document.getElementById('filterDropdown').value; // 'all', 'pass', 'fail'
-            
-            const rows = document.querySelectorAll('#compareTableBody tr');
-            rows.forEach(row => {
-                if(row.cells.length < 7) return;
-                
-                const itemName = row.cells[1].innerText.toLowerCase();
-                const judgeText = row.cells[6].innerText;
-                
-                let textMatch = itemName.includes(searchText);
-                
-                let filterMatch = true;
-                if (filterState === 'pass') {
-                    filterMatch = judgeText.includes('??);
-                } else if (filterState === 'fail') {
-                    filterMatch = judgeText.includes('?좑툘') || judgeText.includes('??);
-                }
-                
-                if (textMatch && filterMatch) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
-        function switchCompareTab(tabId) {
-            const tabs = ['pharma', 'quasi', 'cosmetic', 'device'];
-            tabs.forEach(id => {
-                const btn = document.getElementById('tab-' + id);
-                if (id === tabId) {
-                    btn.classList.replace('border-transparent', 'border-brand-600');
-                    btn.classList.replace('text-gray-500', 'text-brand-600');
-                    btn.classList.add('font-bold');
-                    btn.classList.remove('font-semibold');
-                } else {
-                    btn.classList.replace('border-brand-600', 'border-transparent');
-                    btn.classList.replace('text-brand-600', 'text-gray-500');
-                    btn.classList.add('font-semibold');
-                    btn.classList.remove('font-bold');
-                }
-            });
-            
-            currentCompareTab = tabId;
-            
-            const wrapper = document.getElementById('compareContentWrapper');
-            wrapper.classList.add('opacity-0');
-            
-            setTimeout(() => {
-                renderCompareTable();
-                applyCompareFilter(); // ???꾪솚 ??湲곗〈 ?꾪꽣 議곌굔 ?ъ쟻??                wrapper.classList.remove('opacity-0');
-            }, 150);
-        }
-
-        function renderCompareTable() {
-            const tabData = mockCompareDataObj[currentCompareTab];
-            
-            document.getElementById('col-item-name').textContent = tabData.itemColTitle;
-            document.getElementById('col-foreign-1').textContent = tabData.foreign1Title;
-            document.getElementById('col-foreign-2').textContent = tabData.foreign2Title;
-
-            const tbody = document.getElementById('compareTableBody');
-            tbody.innerHTML = '';
-
-            tabData.data.forEach(item => {
-                let barColor = 'bg-brand-500';
-                if(item.matchRate < 70) barColor = 'bg-red-500';
-                else if(item.matchRate < 90) barColor = 'bg-yellow-500';
-
-                const barHtml = `
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-1 overflow-hidden flex">
-                        <div class="${barColor} h-2.5 rounded-full transition-all duration-1000" style="width: ${item.matchRate}%"></div>
-                    </div>
-                `;
-
-                const judgeColor = item.judge.includes('??) ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50 font-semibold';
-                
-                tbody.innerHTML += `
-                    <tr class="hover:bg-blue-50 transition-colors group">
-                        <td class="px-4 py-3 text-center border-r border-gray-100">
-                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-600 group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">${item.rank}</span>
-                        </td>
-                        <td class="px-4 py-3 font-medium text-gray-800 border-r border-gray-100">${item.name}</td>
-                        <td class="px-4 py-3 text-gray-600">${item.mfds}</td>
-                        <td class="px-4 py-3 border-l border-gray-100 text-gray-600">${item.fda}</td>
-                        <td class="px-4 py-3 border-r border-gray-100 text-gray-600">${item.eu}</td>
-                        <td class="px-4 py-3 border-r border-gray-100">
-                            <div class="flex justify-between items-center text-xs text-gray-500 mb-0.5">
-                                <span>?쇱튂??/span>
-                                <span class="font-bold text-gray-700">${item.matchRate}%</span>
-                            </div>
-                            ${barHtml}
-                        </td>
-                        <td class="px-4 py-3 text-sm ${judgeColor}">${item.judge}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        // Chart.js ?쒓컖??濡쒖쭅
-        function renderChart(data) {
-            const ctx = document.getElementById('resultChart');
-            if (!ctx) return;
-            if (myChart) myChart.destroy(); // 湲곗〈 李⑦듃 ?몄뒪?댁뒪 ?뚮㈇
-            
-            // ?쒓컖?붾뒗 ?섏튂 鍮꾧탳媛 媛?ν븳 ??ぉ?ㅻ쭔 ??곸쑝濡???            const chartData = data.filter(d => d.actualValue !== null && d.mfdsValue !== null);
-
-            const labels = chartData.map(d => d.param);
-            const actualValues = chartData.map(d => d.actualValue);
-            const mfdsValues = chartData.map(d => d.mfdsValue);
-            
-            const internalInput = document.getElementById('internalSpecInput').value;
-            const internalSpecValue = internalInput !== "" ? parseFloat(internalInput) : null;
-            const internalValues = chartData.map(d => internalSpecValue !== null ? internalSpecValue : 0);
-
-            const datasets = [
-                {
-                    label: '?앹빟泥??붽뎄 湲곗? (MFDS)',
-                    data: mfdsValues,
-                    backgroundColor: 'rgba(54, 162, 235, 0.4)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }
-            ];
-
-            if (internalSpecValue !== null) {
-                datasets.push({
-                    label: `?щ궡 愿由?湲곗? (${internalInput})`,
-                    data: internalValues,
-                    backgroundColor: 'rgba(255, 159, 64, 0.4)',
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1
-                });
-            }
-
-            // 議곌굔遺 ?됱긽 ?곸슜 (湲곗? ?댄깉??鍮④컙?? ?듦낵??珥덈줉??
-            const actualColors = chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)');
-            const actualBorders = chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)');
-
-            datasets.push({
-                label: '?ㅼ젣 臾몄꽌 湲곗옱媛?,
-                data: actualValues,
-                backgroundColor: actualColors,
-                borderColor: actualBorders,
-                borderWidth: 1
-            });
-
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '?섏튂 / 鍮꾩쑉 (%)'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': ' + context.parsed.y;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 寃곌낵 蹂닿린 濡쒖쭅 (媛??濡쒕뵫 援ы쁽)
-        function showResult(type) {
-            if (type !== 'compare') {
-                if (!isApiSpecUploaded) {
-                    alert("?먮즺 洹쒓꺽??API Spec) ?뚯씪??癒쇱? ?낅줈?쒗빐二쇱꽭??");
-                    return;
-                }
-                if (!isLocalDbUploaded) {
-                    alert("濡쒖뺄 洹쒖젣 ?곗씠?곕쿋?댁뒪 誘몄꺼遺: ?쒖뒪?쒖뿉 湲곕낯 ?댁옣??湲濡쒕쾶 洹쒖젣 媛?대뱶?쇱씤(?쒓뎅 ?앹빟泥? ICH Q Guidelines, 誘멸뎅 FDA)??湲곗??쇰줈 洹쒖젣 寃?좊? 吏꾪뻾?⑸땲??");
-                }
-            }
-
-            resetView();
-            document.getElementById('idleState').classList.add('hidden');
-            
-            const loader = document.getElementById('loadingState');
-            loader.classList.remove('hidden');
-
-            const loadingTexts = {
-                'missing': '?앹빟泥?諛??щ궡 湲곗?怨?洹쒓꺽?쒕? ?議곗쨷?낅땲??..',
-                'compare': '援??蹂??쎌쟾 諛?媛?대뜕?ㅻ? 援먯감 遺꾩꽍以묒엯?덈떎...',
-                'report': '寃??寃곌낵 ?듦퀎, ?쒓컖??李⑦듃 諛?由ы룷?몃? ?앹꽦以묒엯?덈떎...'
-            };
-            document.getElementById('loadingText').textContent = loadingTexts[type];
-
-            setTimeout(() => {
-                loader.classList.add('hidden');
-                document.getElementById('actionButtons').classList.remove('hidden');
-
-                const csvBtn = document.getElementById('csvDownloadBtn');
-                const printBtn = document.getElementById('printReportBtn');
-
-                if (type === 'missing') {
-                    if(csvBtn) csvBtn.style.display = 'inline-block';
-                    if(printBtn) printBtn.style.display = 'inline-block';
-                    renderMissingData();
-                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-magnifying-glass-chart text-brand-600 mr-2"></i>?꾩닔 ??ぉ ?꾨씫 諛?湲곗? ?댄깉 寃異?寃곌낵';
-                    document.getElementById('resultMissing').classList.remove('hidden');
-                } else if (type === 'compare') {
-                    if(csvBtn) csvBtn.style.display = 'none';
-                    if(printBtn) printBtn.style.display = 'none'; // 鍮꾧탳 ?꾪솴 ??뿉??異쒕젰 踰꾪듉 ?④?
-                    switchCompareTab('pharma');
-                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-code-compare text-brand-600 mr-2"></i>??ぉ蹂??깅텇 洹쒖젣 鍮꾧탳 ?꾪솴 ??쒕낫??;
-                    document.getElementById('resultCompare').classList.remove('hidden');
-                } else if (type === 'report') {
-                    if(csvBtn) csvBtn.style.display = 'inline-block';
-                    if(printBtn) printBtn.style.display = 'inline-block';
-                    document.getElementById('resultTitle').innerHTML = '<i class="fa-solid fa-stopwatch text-brand-600 mr-2"></i>QA/RA ?먮룞 寃??寃곌낵 蹂닿퀬??;
-                    document.getElementById('resultReport').classList.remove('hidden');
-                    
-                    renderReportData();
-                }
-            }, 1000);
-        }
-
-        function renderReportData() {
-            evaluatedGlobalData = evaluateData(currentAnalysisData);
-
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            document.getElementById('reportDate').textContent = dateStr;
-            document.getElementById('reportDocName').textContent = currentApiFileName;
-
-            let passCnt = 0;
-            let failCnt = 0;
-            const tBody = document.getElementById('reportTableBody');
-            const actionList = document.getElementById('actionItemsList');
-            tBody.innerHTML = '';
-            actionList.innerHTML = '';
-
-            const internalInput = document.getElementById('internalSpecInput').value;
-
-            evaluatedGlobalData.forEach(item => {
-                if(item.isFail) failCnt++;
-                else passCnt++;
-
-                const badge = item.isFail 
-                    ? `<span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded">Fail</span>` 
-                    : `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded">Pass</span>`;
-                
-                let judgeStr = `MFDS: ${item.mfdsPass ? 'Pass' : 'Fail'}`;
-                if (internalInput) {
-                    judgeStr += `<br><span class="${item.internalPass ? 'text-green-600 font-semibold' : 'text-red-600 font-bold'}">Internal: ${item.internalPass ? 'Pass' : 'Fail'}</span>`;
-                }
-
-                tBody.innerHTML += `
-                    <tr>
-                        <td class="px-4 py-3 border-b border-gray-100 font-medium text-gray-800">${item.param}</td>
-                        <td class="px-4 py-3 border-b border-gray-100 ${item.isFail ? 'text-red-600 font-bold' : 'text-gray-600'}">${item.docValue}</td>
-                        <td class="px-4 py-3 border-b border-gray-100 text-gray-600">${item.mfdsLimit}</td>
-                        <td class="px-4 py-3 border-b border-gray-100 text-center text-xs leading-tight">
-                            ${badge}<br><span class="inline-block mt-1">${judgeStr}</span>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById('reportPassCount').textContent = passCnt;
-            document.getElementById('reportFailCount').textContent = failCnt;
-
-            const failItems = evaluatedGlobalData.filter(item => item.isFail);
-            if(failItems.length === 0) {
-                actionList.innerHTML = `<li class="text-sm text-green-600 font-bold"><i class="fa-solid fa-check-circle mr-2"></i>紐⑤뱺 ??ぉ??洹쒖젣 諛??щ궡 湲곗? 踰붿쐞 ?댁뿉 ?덉뒿?덈떎.</li>`;
-            } else {
-                failItems.forEach(item => {
-                    actionList.innerHTML += `
-                        <li class="flex items-start">
-                            <i class="fa-solid fa-triangle-exclamation text-red-500 mt-1 mr-3"></i>
-                            <div>
-                                <p class="text-sm font-bold text-gray-800">?좑툘 [OOS/OOT] ${item.param} - ?덉쭏 ?됯? 蹂댁셿 ?붾쭩</p>
-                                <p class="text-xs text-gray-600 mt-0.5">?곸꽭 ?ъ쑀: ?꾩옱 湲곗옱??'${item.docValue}'??洹쒖젣 ?먮뒗 ?щ궡 湲곗????댄깉?? ${item.action}</p>
-                            </div>
-                        </li>
-                    `;
-                });
-            }
-
-            // ?쒓컖??李⑦듃 ?뚮뜑留??몄텧
-            renderChart(evaluatedGlobalData);
-        }
-
-        // --- ?슚 ?몄뇙 踰꾧렇 ?먯쿇 李⑤떒???꾪븳 ?먮컮?ㅽ겕由쏀듃 媛뺤젣 媛쒖엯 ?슚 ---
-        // 釉뚮씪?곗????몄뇙 ??붿긽?먭? ?대━湲?吏곸쟾怨??ロ엺 吏곹썑???ㅽ뻾?⑸땲??
-        window.addEventListener('beforeprint', () => {
-            // 1. ?쇱옱 異쒕젰 諛⑹?: hidden ?대옒?ㅺ? ?덈뒗 ??? ?몄뇙 吏곸쟾 DOM ?덈꺼?먯꽌 ?꾩삁 display: none 諛뺤븘踰꾨┝ (?대뼡 CSS蹂대떎 媛뺣젰??
-            const views = ['resultMissing', 'resultCompare', 'resultReport'];
-            views.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) {
-                    if(el.classList.contains('hidden')) {
-                        el.style.setProperty('display', 'none', 'important');
-                        el.style.setProperty('opacity', '0', 'important');
-                    } else {
-                        el.style.setProperty('display', 'block', 'important');
-                    }
-                }
-            });
-
-            // 2. ?щ＼ 鍮??섏씠吏 踰꾧렇 諛⑹?: ?ㅽ겕濡?諛?怨좎젙 ?믪씠 ?꾨꼍 ?댁젣
-            const scrollContainers = document.querySelectorAll('.overflow-y-auto, .h-full, .h-screen, .flex-1, .flex, .flex-col');
-            scrollContainers.forEach(el => {
-                if(!el.classList.contains('hidden')) {
-                    el.style.setProperty('overflow', 'visible', 'important');
-                    el.style.setProperty('height', 'auto', 'important');
-                    el.style.setProperty('max-height', 'none', 'important');
-                }
-            });
-        });
-
-        window.addEventListener('afterprint', () => {
-            // ?몄뇙 ?꾨즺 ???몃씪???ㅽ????뺣━ (?먮옒 ?곹깭濡?蹂듦뎄)
-            const views = ['resultMissing', 'resultCompare', 'resultReport'];
-            views.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) {
-                    el.style.removeProperty('display');
-                    el.style.removeProperty('opacity');
-                }
-            });
-
-            const scrollContainers = document.querySelectorAll('.overflow-y-auto, .h-full, .h-screen, .flex-1, .flex, .flex-col');
-            scrollContainers.forEach(el => {
-                el.style.removeProperty('overflow');
-                el.style.removeProperty('height');
-                el.style.removeProperty('max-height');
-            });
-        });
-    </script>
-</body>
-</html>
