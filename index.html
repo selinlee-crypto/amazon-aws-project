@@ -322,8 +322,16 @@
                 <!-- 결과: 누락 항목 검출 -->
                 <div id="resultMissing" class="hidden space-y-6 h-full">
                     <!-- 요약 카드 -->
-                    <div class="grid grid-cols-3 gap-4" id="missingSummaryCards">
-                        <!-- JS 렌더링 영역 -->
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1 grid grid-cols-3 gap-4" id="missingSummaryCards">
+                            <!-- JS 렌더링 영역 -->
+                        </div>
+                        <div class="w-full md:w-64 bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                            <h4 class="text-xs font-bold text-gray-500 mb-2">종합 판정 요약</h4>
+                            <div class="relative w-32 h-32">
+                                <canvas id="summaryChart"></canvas>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 결과 데이터 테이블 -->
@@ -339,6 +347,7 @@
                                         <th scope="col" class="px-6 py-3">항목명 (Parameter)</th>
                                         <th scope="col" class="px-6 py-3">문서 내 기재값</th>
                                         <th scope="col" class="px-6 py-3">규제 기준 (MFDS)</th>
+                                        <th scope="col" class="px-6 py-3">시각화 (Progress)</th>
                                         <th scope="col" class="px-6 py-3">상태</th>
                                         <th scope="col" class="px-6 py-3">권고사항</th>
                                     </tr>
@@ -445,10 +454,14 @@
                                 <table class="w-full text-sm text-left">
                                     <thead class="bg-gray-50 text-gray-500 uppercase border-b border-gray-200">
                                         <tr>
-                                            <th class="px-4 py-2 font-semibold">검토 항목</th>
-                                            <th class="px-4 py-2 font-semibold">기재값</th>
-                                            <th class="px-4 py-2 font-semibold">요구 기준</th>
-                                            <th class="px-4 py-2 font-semibold text-center">판정</th>
+                                            <th class="px-4 py-2 font-semibold bg-gray-100">검토 항목</th>
+                                            <th class="px-4 py-2 font-semibold bg-blue-50">측정 결과</th>
+                                            <th class="px-4 py-2 font-semibold border-l border-gray-200">MFDS 기준</th>
+                                            <th class="px-4 py-2 font-semibold border-l border-gray-200">ICH 기준</th>
+                                            <th class="px-4 py-2 font-semibold border-l border-gray-200">FDA 기준</th>
+                                            <th class="px-4 py-2 font-semibold text-center border-l border-gray-200">MFDS 판정</th>
+                                            <th class="px-4 py-2 font-semibold text-center border-l border-gray-200">ICH 판정</th>
+                                            <th class="px-4 py-2 font-semibold text-center border-l border-gray-200">FDA 판정</th>
                                         </tr>
                                     </thead>
                                     <tbody id="reportTableBody" class="divide-y divide-gray-100">
@@ -503,13 +516,14 @@
 
         // 기본 샘플 데이터 (CSV 업로드 실패 시 또는 CSV가 아닌 파일 업로드 시 사용)
         function getFallbackData() {
+            // ※ 시연용 데이터: ICH Q3A(Impurity) 기준 및 FDA 가이드라인 수치 다각화 적용
             return [
-                { param: '잔류용매', docValue: '0.05%', mfdsLimit: '0.1% 이하', actualValue: 0.05, mfdsValue: 0.1, isMinLimit: false },
-                { param: '유연물질', docValue: '0.12%', mfdsLimit: '0.1% 이하', actualValue: 0.12, mfdsValue: 0.1, isMinLimit: false },
-                { param: '건조감량', docValue: '0.4%', mfdsLimit: '0.5% 이하', actualValue: 0.4, mfdsValue: 0.5, isMinLimit: false },
-                { param: '성상', docValue: '백색 가루', mfdsLimit: '백색 가루', actualValue: null, mfdsValue: null, isMinLimit: false },
-                { param: '순도', docValue: '98.5%', mfdsLimit: '99.0% 이상', actualValue: 98.5, mfdsValue: 99.0, isMinLimit: true },
-                { param: '중금속', docValue: '15ppm', mfdsLimit: '20ppm 이하', actualValue: 15, mfdsValue: 20, isMinLimit: false }
+                { param: '잔류용매', docValue: '0.05%', mfdsLimit: '0.1% 이하', actualValue: 0.05, mfdsValue: 0.1, ichLimit: '0.05% 이하', ichValue: 0.05, fdaLimit: '0.1% 이하', fdaValue: 0.1, isMinLimit: false },
+                { param: '유연물질', docValue: '0.12%', mfdsLimit: '0.1% 이하', actualValue: 0.12, mfdsValue: 0.1, ichLimit: '0.05%(Report) / 0.10%(ID)', ichValue: 0.10, fdaLimit: '0.1% 이하', fdaValue: 0.1, isMinLimit: false },
+                { param: '건조감량', docValue: '0.4%', mfdsLimit: '0.5% 이하', actualValue: 0.4, mfdsValue: 0.5, ichLimit: '0.5% 이하', ichValue: 0.5, fdaLimit: '0.5% 이하', fdaValue: 0.5, isMinLimit: false },
+                { param: '성상', docValue: '백색 가루', mfdsLimit: '백색 가루', actualValue: null, mfdsValue: null, ichLimit: '백색 가루', ichValue: null, fdaLimit: '백색 가루', fdaValue: null, isMinLimit: false },
+                { param: '순도', docValue: '98.5%', mfdsLimit: '99.0% 이상', actualValue: 98.5, mfdsValue: 99.0, ichLimit: '99.0% 이상', ichValue: 99.0, fdaLimit: '99.5% 이상', fdaValue: 99.5, isMinLimit: true },
+                { param: '중금속', docValue: '15ppm', mfdsLimit: '20ppm 이하', actualValue: 15, mfdsValue: 20, ichLimit: '10ppm 이하 (Q3D)', ichValue: 10, fdaLimit: '10ppm 이하', fdaValue: 10, isMinLimit: false }
             ];
         }
 
@@ -536,12 +550,27 @@
                         
                         const isMinLimit = mfdsLimit.includes('이상');
 
+                        // 다중 규제 기준 시뮬레이션을 위한 가상 확장 로직 (실제는 CSV 컬럼으로 처리)
+                        let ichValue = mfdsValue !== null ? mfdsValue * 0.8 : null; 
+                        let fdaValue = mfdsValue !== null ? mfdsValue * 0.9 : null; 
+                        if (isMinLimit) {
+                            ichValue = mfdsValue !== null ? mfdsValue : null;
+                            fdaValue = mfdsValue !== null ? mfdsValue + 0.5 : null; 
+                        }
+
+                        const ichLimit = ichValue !== null ? ichValue.toFixed(2) + (mfdsLimit.includes('%') ? '%' : '') + (isMinLimit?' 이상':' 이하') : mfdsLimit;
+                        const fdaLimit = fdaValue !== null ? fdaValue.toFixed(2) + (mfdsLimit.includes('%') ? '%' : '') + (isMinLimit?' 이상':' 이하') : mfdsLimit;
+
                         data.push({
                             param,
                             docValue,
                             mfdsLimit,
                             actualValue,
                             mfdsValue,
+                            ichLimit,
+                            ichValue,
+                            fdaLimit,
+                            fdaValue,
                             isMinLimit
                         });
                     }
@@ -552,32 +581,45 @@
             }
         }
 
-        // 사내 기준 및 식약처 기준 동시 평가 로직
+        // 사내 기준 및 식약처/ICH/FDA 3개 글로벌 기관 동시 평가 로직
         function evaluateData(dataArray) {
             const internalInput = document.getElementById('internalSpecInput').value;
             const internalSpecValue = internalInput !== "" ? parseFloat(internalInput) : null;
 
             return dataArray.map(item => {
                 let mfdsPass = true;
+                let ichPass = true;
+                let fdaPass = true;
                 let internalPass = true;
                 
-                // 식약처 기준 평가
-                if (item.actualValue !== null && item.mfdsValue !== null) {
-                    if (item.isMinLimit) {
-                        if (item.actualValue < item.mfdsValue) mfdsPass = false;
-                    } else {
-                        if (item.actualValue > item.mfdsValue) mfdsPass = false;
+                if (item.actualValue !== null) {
+                    if (item.mfdsValue !== null) {
+                        if (item.isMinLimit) {
+                            if (item.actualValue < item.mfdsValue) mfdsPass = false;
+                        } else {
+                            if (item.actualValue > item.mfdsValue) mfdsPass = false;
+                        }
                     }
-                }
-
-                // 사내 기준 평가 (일반적으로 사내 기준은 최대 허용치라고 가정. 최소치 요건일 경우 사내기준이 더 엄격한 최소치라고 처리)
-                if (internalSpecValue !== null && item.actualValue !== null && !item.isMinLimit) {
-                    if (item.actualValue > internalSpecValue) {
-                        internalPass = false;
+                    if (item.ichValue !== null) {
+                        if (item.isMinLimit) {
+                            if (item.actualValue < item.ichValue) ichPass = false;
+                        } else {
+                            if (item.actualValue > item.ichValue) ichPass = false;
+                        }
                     }
-                } else if (internalSpecValue !== null && item.actualValue !== null && item.isMinLimit) {
-                    if (item.actualValue < internalSpecValue) {
-                        internalPass = false;
+                    if (item.fdaValue !== null) {
+                        if (item.isMinLimit) {
+                            if (item.actualValue < item.fdaValue) fdaPass = false;
+                        } else {
+                            if (item.actualValue > item.fdaValue) fdaPass = false;
+                        }
+                    }
+                    if (internalSpecValue !== null) {
+                        if (item.isMinLimit) {
+                            if (item.actualValue < internalSpecValue) internalPass = false;
+                        } else {
+                            if (item.actualValue > internalSpecValue) internalPass = false;
+                        }
                     }
                 }
 
@@ -585,27 +627,21 @@
                 let isFail = false;
                 let action = "-";
 
-                // 평가 가능한 수치 데이터인 경우
                 if (item.actualValue !== null && item.mfdsValue !== null) {
-                    if (!mfdsPass && !internalPass) {
-                        statusText = "식약처/사내 기준 동시 이탈";
+                    if (!mfdsPass || !ichPass || !fdaPass) {
+                        statusText = "글로벌 규제 기준 이탈 (OOS)";
                         isFail = true;
-                        action = "MFDS 및 사내 관리 기준을 모두 초과함. 즉각적인 제품 원인 조사 요망.";
-                    } else if (!mfdsPass) {
-                        statusText = "식약처 기준 이탈 (OOS)";
-                        isFail = true;
-                        action = "식약처 규제 기준 위반. 제조사에 공정 개선 요청 및 재시험.";
+                        action = "일부 규제 기관 기준을 초과함. (※ ICH Q3A/Q3B: 보고 문턱(Reporting Threshold) 또는 확인 문턱(Identification Threshold) 초과 여부 정밀 평가 요망)";
                     } else if (!internalPass) {
                         statusText = "사내 기준 이탈 (OOT)";
                         isFail = true;
                         action = "사내 품질 관리 기준(Internal Spec)을 벗어남. 경향성 파악 요망.";
                     } else {
-                        statusText = "적합";
+                        statusText = "글로벌 적합 (Pass)";
                         isFail = false;
-                        action = "식약처 및 사내 기준 모두 만족.";
+                        action = "MFDS, ICH, FDA 및 사내 기준 모두 완벽히 충족.";
                     }
                 } else {
-                    // 수치 데이터가 없는 텍스트 항목인 경우
                     if (item.docValue.includes("기재 안됨") || item.docValue.includes("누락")) {
                         statusText = "항목 누락";
                         isFail = true;
@@ -620,6 +656,8 @@
                 return {
                     ...item,
                     mfdsPass,
+                    ichPass,
+                    fdaPass,
                     internalPass,
                     statusText,
                     isFail,
@@ -850,6 +888,8 @@
             document.body.removeChild(link);
         }
 
+        let summaryChartInst = null;
+
         // 3. 누락 데이터 (Missing) 렌더링
         function renderMissingData() {
             // 검토 전 로직 적용
@@ -860,14 +900,50 @@
             
             let missingCount = 0;
             let passCount = 0;
+            let omittedCount = 0;
 
             evaluatedGlobalData.forEach(item => {
-                if (item.isFail) missingCount++;
-                else passCount++;
+                if (item.statusText === "항목 누락") {
+                    omittedCount++;
+                } else if (item.isFail) {
+                    missingCount++;
+                } else {
+                    passCount++;
+                }
+
+                // Progress Bar 계산 로직
+                let progressBarHtml = `<span class="text-xs text-gray-400">수치 없음</span>`;
+                if (item.actualValue !== null && item.mfdsValue !== null && item.mfdsValue > 0) {
+                    let percent = (item.actualValue / item.mfdsValue) * 100;
+                    
+                    let barColor = 'bg-green-500';
+                    let barPercent = percent;
+                    
+                    if (item.isMinLimit) {
+                        if (item.actualValue < item.mfdsValue) barColor = 'bg-red-500';
+                        barPercent = Math.min(percent, 100); 
+                    } else {
+                        if (item.actualValue > item.mfdsValue) barColor = 'bg-red-500';
+                        barPercent = Math.min(percent, 100); // CSS 폭이 100%를 넘지 않도록
+                    }
+
+                    progressBarHtml = `
+                        <div class="flex items-center space-x-2 w-full">
+                            <div class="w-24 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                <div class="${barColor} h-2.5 rounded-full" style="width: ${barPercent}%"></div>
+                            </div>
+                            <span class="text-xs font-medium text-gray-600 w-10">${percent.toFixed(1)}%</span>
+                        </div>
+                    `;
+                } else if (item.actualValue !== null && item.mfdsValue === null) {
+                    progressBarHtml = `<span class="text-xs text-gray-400">기준 없음</span>`;
+                }
 
                 const rowBg = item.isFail ? 'bg-red-50 border-b border-red-100' : 'bg-white border-b border-gray-100 opacity-80';
                 
                 let badgeClass = item.isFail ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
+                if (item.statusText === "항목 누락") badgeClass = 'bg-yellow-100 text-yellow-800';
+                
                 const statusBadge = `<span class="${badgeClass} text-xs font-semibold px-2 py-1 rounded">${item.statusText}</span>`;
 
                 tbody.innerHTML += `
@@ -875,6 +951,7 @@
                         <td class="px-6 py-4 font-medium text-gray-900">${item.param}</td>
                         <td class="px-6 py-4 ${item.isFail ? 'text-red-600 font-bold' : ''}">${item.docValue}</td>
                         <td class="px-6 py-4">${item.mfdsLimit}</td>
+                        <td class="px-6 py-4">${progressBarHtml}</td>
                         <td class="px-6 py-4">${statusBadge}</td>
                         <td class="px-6 py-4 text-xs text-gray-600">${item.action}</td>
                     </tr>
@@ -883,18 +960,64 @@
 
             document.getElementById('missingSummaryCards').innerHTML = `
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-red-500">
-                    <p class="text-sm text-gray-500 font-medium">검출된 규격 이탈/누락</p>
+                    <p class="text-sm text-gray-500 font-medium">검출된 규격 이탈/주의</p>
                     <p class="text-2xl font-bold text-red-600 mt-1">${missingCount}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-yellow-500">
+                    <p class="text-sm text-gray-500 font-medium">항목 누락</p>
+                    <p class="text-2xl font-bold text-yellow-600 mt-1">${omittedCount}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
                 </div>
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-green-500">
                     <p class="text-sm text-gray-500 font-medium">정상 통과 항목</p>
                     <p class="text-2xl font-bold text-green-600 mt-1">${passCount}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-blue-500">
-                    <p class="text-sm text-gray-500 font-medium">총 검토 항목</p>
-                    <p class="text-2xl font-bold text-navy-900 mt-1">${evaluatedGlobalData.length}<span class="text-sm text-gray-500 font-normal ml-1">건</span></p>
-                </div>
             `;
+
+            renderSummaryDoughnutChart(passCount, missingCount, omittedCount);
+        }
+
+        function renderSummaryDoughnutChart(passCnt, failCnt, omittedCnt) {
+            const ctx = document.getElementById('summaryChart');
+            if (!ctx) return;
+            if (summaryChartInst) summaryChartInst.destroy();
+
+            summaryChartInst = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['합격 (Pass)', '규격 이탈 (Fail)', '항목 누락 (Missing)'],
+                    datasets: [{
+                        data: [passCnt, failCnt, omittedCnt],
+                        backgroundColor: [
+                            'rgba(74, 222, 128, 0.8)',
+                            'rgba(248, 113, 113, 0.8)',
+                            'rgba(250, 204, 21, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(74, 222, 128, 1)',
+                            'rgba(248, 113, 113, 1)',
+                            'rgba(250, 204, 21, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.raw + '건';
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
         }
 
         // 4. 비교 데이터 렌더링 및 글로벌 검색 필터
@@ -1012,42 +1135,56 @@
             const labels = chartData.map(d => d.param);
             const actualValues = chartData.map(d => d.actualValue);
             const mfdsValues = chartData.map(d => d.mfdsValue);
+            const ichValues = chartData.map(d => d.ichValue || d.mfdsValue);
+            const fdaValues = chartData.map(d => d.fdaValue || d.mfdsValue);
             
-            const internalInput = document.getElementById('internalSpecInput').value;
-            const internalSpecValue = internalInput !== "" ? parseFloat(internalInput) : null;
-            const internalValues = chartData.map(d => internalSpecValue !== null ? internalSpecValue : 0);
-
             const datasets = [
                 {
-                    label: '식약처 요구 기준 (MFDS)',
+                    label: '실제 측정 결과 (Result)',
+                    data: actualValues,
+                    backgroundColor: chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.8)'),
+                    borderColor: chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'),
+                    borderWidth: 1,
+                    type: 'bar',
+                    order: 4
+                },
+                {
+                    label: 'MFDS 임계선',
                     data: mfdsValues,
-                    backgroundColor: 'rgba(54, 162, 235, 0.4)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    type: 'line',
+                    fill: false,
+                    pointRadius: 4,
+                    order: 1
+                },
+                {
+                    label: 'ICH 임계선',
+                    data: ichValues,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    type: 'line',
+                    fill: false,
+                    pointRadius: 4,
+                    order: 2
+                },
+                {
+                    label: 'FDA 임계선',
+                    data: fdaValues,
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    type: 'line',
+                    fill: false,
+                    pointRadius: 4,
+                    order: 3
                 }
             ];
-
-            if (internalSpecValue !== null) {
-                datasets.push({
-                    label: `사내 관리 기준 (${internalInput})`,
-                    data: internalValues,
-                    backgroundColor: 'rgba(255, 159, 64, 0.4)',
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1
-                });
-            }
-
-            // 조건부 색상 적용 (기준 이탈시 빨간색, 통과시 초록색)
-            const actualColors = chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)');
-            const actualBorders = chartData.map(d => d.isFail ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)');
-
-            datasets.push({
-                label: '실제 문서 기재값',
-                data: actualValues,
-                backgroundColor: actualColors,
-                borderColor: actualBorders,
-                borderWidth: 1
-            });
 
             myChart = new Chart(ctx, {
                 type: 'bar',
@@ -1157,23 +1294,24 @@
                 if(item.isFail) failCnt++;
                 else passCnt++;
 
-                const badge = item.isFail 
-                    ? `<span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded">Fail</span>` 
-                    : `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded">Pass</span>`;
+                const mfdsBadge = item.mfdsPass ? `<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded w-full block text-center">Pass</span>` : `<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded w-full block text-center">Fail</span>`;
+                const ichBadge = item.ichPass ? `<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded w-full block text-center">Pass</span>` : `<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded w-full block text-center">Fail</span>`;
+                const fdaBadge = item.fdaPass ? `<span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded w-full block text-center">Pass</span>` : `<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded w-full block text-center">Fail</span>`;
                 
-                let judgeStr = `MFDS: ${item.mfdsPass ? 'Pass' : 'Fail'}`;
-                if (internalInput) {
-                    judgeStr += `<br><span class="${item.internalPass ? 'text-green-600 font-semibold' : 'text-red-600 font-bold'}">Internal: ${item.internalPass ? 'Pass' : 'Fail'}</span>`;
-                }
+                let mfdsColor = item.mfdsPass ? "text-gray-600" : "text-red-600 font-bold bg-red-50";
+                let ichColor = item.ichPass ? "text-gray-600" : "text-red-600 font-bold bg-red-50";
+                let fdaColor = item.fdaPass ? "text-gray-600" : "text-red-600 font-bold bg-red-50";
 
                 tBody.innerHTML += `
-                    <tr>
-                        <td class="px-4 py-3 border-b border-gray-100 font-medium text-gray-800">${item.param}</td>
-                        <td class="px-4 py-3 border-b border-gray-100 ${item.isFail ? 'text-red-600 font-bold' : 'text-gray-600'}">${item.docValue}</td>
-                        <td class="px-4 py-3 border-b border-gray-100 text-gray-600">${item.mfdsLimit}</td>
-                        <td class="px-4 py-3 border-b border-gray-100 text-center text-xs leading-tight">
-                            ${badge}<br><span class="inline-block mt-1">${judgeStr}</span>
-                        </td>
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium text-gray-800 bg-gray-50 border-r border-gray-100">${item.param}</td>
+                        <td class="px-4 py-3 font-bold text-navy-900 bg-blue-50 bg-opacity-30">${item.docValue}</td>
+                        <td class="px-4 py-3 border-l border-gray-100 ${mfdsColor}">${item.mfdsLimit}</td>
+                        <td class="px-4 py-3 border-l border-gray-100 ${ichColor}">${item.ichLimit}</td>
+                        <td class="px-4 py-3 border-l border-gray-100 ${fdaColor}">${item.fdaLimit}</td>
+                        <td class="px-4 py-3 text-center border-l border-gray-100">${mfdsBadge}</td>
+                        <td class="px-4 py-3 text-center border-l border-gray-100">${ichBadge}</td>
+                        <td class="px-4 py-3 text-center border-l border-gray-100">${fdaBadge}</td>
                     </tr>
                 `;
             });
